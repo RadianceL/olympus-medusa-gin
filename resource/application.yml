@@ -1,0 +1,22 @@
+web:
+  static_path:
+  port: 9990
+application:
+  log:
+    level: debug
+    logPath: ./asset/log/log.log
+gorm:
+  debug: true
+  driverName: mysql
+  max_lifetime: 72000
+  max_open_conns: 150
+  max_idle_conns: 100
+  mysql:
+    host: rm-uf6wq7d56177336o8oo.mysql.rds.aliyuncs.com
+    port: 3306
+    username: pass_saas_cn_super
+    password: K9dA3amSkZm7%##p
+    database: globalization_language_document_drill
+    charset: utf8
+    loc: Asia/Shanghai
+    parameters: parseTime=True&%2FShanghai
