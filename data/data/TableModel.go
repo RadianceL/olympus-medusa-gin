@@ -1,5 +1,9 @@
 package data
 
+type Tabler interface {
+	TableName() string
+}
+
 type TableApplication struct {
 	Id int `json:"id,omitempty"`
 	// 应用名称
@@ -11,9 +15,13 @@ type TableApplication struct {
 	// 应用路径 默认应用路径
 	ApplicationPath string `json:"applicationPath,omitempty"`
 	// 包含的语言范围
-	ApplicationLanguage []string `json:"applicationLanguage,omitempty"`
+	MustContainLanguage string `json:"applicationLanguage,omitempty"`
 	// 应用环境
 	ApplicationEnvironment string `json:"applicationEnvironment,omitempty"`
+}
+
+func (TableApplication) TableName() string {
+	return "tb_application"
 }
 
 type TableApplicationNamespacePage struct {

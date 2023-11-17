@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"olympus-medusa/common"
 	"olympus-medusa/config"
+	routers "olympus-medusa/router"
 )
 
 var (
@@ -44,7 +45,7 @@ func initWeb() {
 	//// 崩溃恢复
 	//app.Use(middleware.RecoveryMiddleware())
 	// 注册路由
-	//routers.RegisterRouter(application)
+	routers.RegisterRouterSys(application.Group("/api"))
 	//application.StaticFS("/kaiyuan", http.Dir("/opt/server/nginx-1.18/html/kaiyuan"))
 	port := viper.GetString("web.port") //这里加载配置文件中的端口
 	if port != "" {

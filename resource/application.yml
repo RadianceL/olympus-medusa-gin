@@ -12,11 +12,11 @@ gorm:
   max_open_conns: 150
   max_idle_conns: 100
   mysql:
-    host: rm-uf6wq7d56177336o8oo.mysql.rds.aliyuncs.com
+    host: 124.222.147.194
     port: 3306
-    username: pass_saas_cn_super
-    password: K9dA3amSkZm7%##p
-    database: globalization_language_document_drill
+    username: root
+    password: root
+    database: globalization_language_document
     charset: utf8
     loc: Asia/Shanghai
     parameters: parseTime=True&%2FShanghai

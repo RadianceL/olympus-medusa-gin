@@ -17,6 +17,9 @@ import (
 
 type IGlobalApplicationController interface {
 	basic.RestController
+	CreateApplication(context *gin.Context)
+	ListApplication(context *gin.Context)
+	ListSupportLanguages(context *gin.Context)
 }
 
 type RestHandler struct {
@@ -45,7 +48,7 @@ func (restHandler RestHandler) CreateApplication(context *gin.Context) {
 		response.ResErrCli(context, err)
 		return
 	}
-	_, err = model.ApplicationModel{}.AddApplication(applicationAddRequest)
+	_, err = restHandler.applicationModel.AddApplication(applicationAddRequest)
 	if err != nil {
 		response.ResErrCli(context, err)
 		return
