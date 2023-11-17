@@ -38,7 +38,7 @@ func setOutPut(log *logrus.Logger, logFilePath string) {
 
 // InitLogger 初始化日志模块
 func InitLogger() {
-	logFilePath := path.Join("./", LogName+LogSuffix)
+	logFilePath := path.Join("./log/", LogName+LogSuffix)
 	logger = logrus.New()
 	setOutPut(logger, logFilePath)
 	logger.SetLevel(logrus.DebugLevel)

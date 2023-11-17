@@ -9,12 +9,9 @@ import (
 	"olympus-medusa/config"
 	"olympus-medusa/data/data"
 	"olympus-medusa/data/request"
-	"olympus-medusa/model/basic"
 )
 
 type IApplicationModel interface {
-	basic.BaseModel
-
 	AddApplication(applicationAddRequest *request.ApplicationRequest) (int64, error)
 	SearchApplicationList(applicationAddRequest *request.ApplicationRequest) ([]data.TableApplication, error)
 	SearchApplicationById(applicationId int) (data.TableApplication, error)

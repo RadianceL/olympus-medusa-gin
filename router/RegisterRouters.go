@@ -8,7 +8,7 @@ import (
 
 func RegisterRouterSys(app *gin.RouterGroup) {
 	app.Use(config.LoggerToFile())
-	menu := controller.RestHandler{}
+	menu := controller.GlobalApplicationController{}
 	globalApplicationController := controller.NewGlobalApplicationController()
 
 	// 创建应用

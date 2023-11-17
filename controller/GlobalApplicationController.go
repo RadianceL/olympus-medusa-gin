@@ -1,54 +1,51 @@
 package controller
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
-	"olympus-medusa/common"
 	"olympus-medusa/common/language"
 	"olympus-medusa/config"
-	"olympus-medusa/controller/basic"
 	Data "olympus-medusa/data/request"
 	"olympus-medusa/data/response"
 	"olympus-medusa/model"
 )
 
 type IGlobalApplicationController interface {
-	basic.RestController
 	CreateApplication(context *gin.Context)
 	ListApplication(context *gin.Context)
 	ListSupportLanguages(context *gin.Context)
 }
 
-type RestHandler struct {
-	DB               *gorm.DB
+type GlobalApplicationController struct {
 	logger           *logrus.Logger
 	applicationModel model.IApplicationModel
 }
 
 func NewGlobalApplicationController() IGlobalApplicationController {
-	return RestHandler{
-		DB:               common.GetDB(),
+	return GlobalApplicationController{
 		logger:           config.GetLogger(),
 		applicationModel: model.NewApplicationModel(),
 	}
 }
 
 // CreateApplication 创建多语言应用/**
-func (restHandler RestHandler) CreateApplication(context *gin.Context) {
+func (controller GlobalApplicationController) CreateApplication(context *gin.Context) {
 	applicationAddRequest := &Data.ApplicationRequest{}
 	err := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
-	if applicationAddRequest.ApplicationName == "" {
-		response.ResFail(context, "应用名称不能为空")
-		return
-	}
 	if err != nil {
 		response.ResErrCli(context, err)
 		return
 	}
-	_, err = restHandler.applicationModel.AddApplication(applicationAddRequest)
+	if applicationAddRequest.ApplicationName == "" {
+		response.ResFail(context, "应用名称不能为空")
+		return
+	}
+	if applicationAddRequest.ApplicationEnvironment == "" {
+		response.ResFail(context, "环境变量不能为空")
+		return
+	}
+	_, err = controller.applicationModel.AddApplication(applicationAddRequest)
 	if err != nil {
 		response.ResErrCli(context, err)
 		return
@@ -57,24 +54,29 @@ func (restHandler RestHandler) CreateApplication(context *gin.Context) {
 }
 
 // ListApplication 查询应用列表/**
-func (restHandler RestHandler) ListApplication(context *gin.Context) {
+func (controller GlobalApplicationController) ListApplication(context *gin.Context) {
 	applicationAddRequest := &Data.ApplicationRequest{}
-	shouldBindBodyWithErr := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
-	if shouldBindBodyWithErr != nil {
-		response.ResFail(context, "json解析异常")
+	err := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
+	if err != nil {
+		response.ResErrCli(context, err)
 		return
 	}
-	searchApplicationList, searchApplicationError := restHandler.applicationModel.SearchApplicationList(applicationAddRequest)
-	if searchApplicationError != nil {
-		restHandler.logger.Error(errors.New("文件类型不合法"), "上传错误", false)
-		response.ResFail(context, "应用处理异常")
+	if applicationAddRequest.ApplicationEnvironment == "" {
+		response.ResFail(context, "环境变量不能为空")
+		return
+	}
+	searchApplicationList, err := controller.applicationModel.
+		SearchApplicationList(applicationAddRequest)
+	if err != nil {
+		controller.logger.Error("查询列表报错：", err)
+		response.ResFail(context, "系统异常，请稍后重试")
 		return
 	}
 	response.ResSuccess(context, searchApplicationList)
 }
 
 // ListSupportLanguages 查询应用支持的语言列表/**
-func (restHandler RestHandler) ListSupportLanguages(context *gin.Context) {
+func (controller GlobalApplicationController) ListSupportLanguages(context *gin.Context) {
 	response.ResSuccess(context, language.Values())
 }
 
@@ -269,7 +271,7 @@ func (restHandler RestHandler) ListSupportLanguages(context *gin.Context) {
 //}
 
 // ListGlobalizationCopyWritingHistory 查询多语言文案历史/**
-func (restHandler RestHandler) ListGlobalizationCopyWritingHistory(context *gin.Context) {
+func (controller GlobalApplicationController) ListGlobalizationCopyWritingHistory(context *gin.Context) {
 	json := &Data.GlobalDocumentRequest{}
 	err := context.ShouldBindBodyWith(&json, binding.JSON)
 	if err != nil {
@@ -280,7 +282,7 @@ func (restHandler RestHandler) ListGlobalizationCopyWritingHistory(context *gin.
 }
 
 // CommitGlobalizationCopyWriting 提交多语言文案更新/**
-func (restHandler RestHandler) CommitGlobalizationCopyWriting(context *gin.Context) {
+func (controller GlobalApplicationController) CommitGlobalizationCopyWriting(context *gin.Context) {
 	json := &Data.GlobalDocumentRequest{}
 	err := context.ShouldBindBodyWith(&json, binding.JSON)
 	if err != nil {
