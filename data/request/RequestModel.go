@@ -1,5 +1,7 @@
 package request
 
+import "olympus-medusa/data/data"
+
 type ApplicationRequest struct {
 	// 应用名称
 	ApplicationName string `json:"applicationName,omitempty"`
@@ -16,6 +18,7 @@ type ApplicationRequest struct {
 }
 
 type NamespaceRequest struct {
+	ApplicationId          int    `json:"applicationId,omitempty"`
 	NamespaceId            int    `json:"namespaceId,omitempty"`
 	NamespaceCode          string `json:"namespaceCode,omitempty"`
 	NamespaceName          string `json:"namespaceName,omitempty"`
@@ -25,6 +28,19 @@ type NamespaceRequest struct {
 	CreateUserId           int    `json:"createUserId,omitempty"`
 	PageIndex              int    `json:"pageIndex,omitempty"`
 	PageSize               int    `json:"pageSize,omitempty"`
+}
+
+func (namespaceRequest NamespaceRequest) ConvertToTableApplicationNamespace(namespace *NamespaceRequest) *data.TableApplicationNamespace {
+	return &data.TableApplicationNamespace{
+		ApplicationId:          namespace.ApplicationId,
+		NamespaceId:            namespace.NamespaceId,
+		NamespaceCode:          namespace.NamespaceCode,
+		NamespaceName:          namespace.NamespaceName,
+		NamespacePath:          namespace.NamespacePath,
+		NamespaceParentId:      namespace.NamespaceParentId,
+		NamespaceApplicationId: namespace.NamespaceApplicationId,
+		CreateUserId:           namespace.CreateUserId,
+	}
 }
 
 type GlobalDocumentRequest struct {
