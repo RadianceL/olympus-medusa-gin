@@ -26,17 +26,17 @@ func NewNamespaceModel() INamespaceModel {
 	return NamespaceModel{db: common.GetDB(), logger: config.GetLogger()}
 }
 
-func (n NamespaceModel) CreateApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (int64, error) {
+func (namespace NamespaceModel) CreateApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (int64, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (n NamespaceModel) ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TableApplicationNamespacePage, error) {
+func (namespace NamespaceModel) ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TableApplicationNamespacePage, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (n NamespaceModel) SearchDocumentByNamespaceId(globalDocumentRequest *data.TableApplicationNamespace) (data.TableGlobalDocumentPage, error) {
+func (namespace NamespaceModel) SearchDocumentByNamespaceId(globalDocumentRequest *data.TableApplicationNamespace) (data.TableGlobalDocumentPage, error) {
 	//TODO implement me
 	panic("implement me")
 }

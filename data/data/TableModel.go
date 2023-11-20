@@ -1,5 +1,9 @@
 package data
 
+import (
+	"time"
+)
+
 type Tabler interface {
 	TableName() string
 }
@@ -24,7 +28,7 @@ func (TableApplication) TableName() string {
 	return "tb_application"
 }
 
-type TableApplicationNamespacePage struct {
+type TablePage struct {
 	TotalSize            int64                       `json:"totalSize,omitempty"`
 	ApplicationNamespace []TableApplicationNamespace `json:"dataList"`
 }
@@ -61,6 +65,31 @@ type TableGlobalDocumentExcel struct {
 	CountryName     string `json:"countryName,omitempty"`
 	DocumentValue   string `json:"documentValue,omitempty"`
 	DocumentDesc    string `json:"documentDesc,omitempty"`
+}
+type ApplicationGlobalizationDocumentCode struct {
+	DocumentID            int       `gorm:"column:document_id;primaryKey;autoIncrement" json:"document_id"`
+	ApplicationID         int       `gorm:"column:application_id;not null" json:"application_id"`
+	NamespaceID           int       `gorm:"column:namespace_id;not null" json:"namespace_id"`
+	DocumentCode          string    `gorm:"column:document_code;not null" json:"document_code"`
+	DocumentDesc          string    `gorm:"column:document_desc" json:"document_desc"`
+	IsEnable              int       `gorm:"column:is_enable;default:1;not null" json:"is_enable"`
+	OnlineTime            time.Time `gorm:"column:online_time" json:"online_time"`
+	OnlineOperatorUserID  int       `gorm:"column:online_operator_user_id" json:"online_operator_user_id"`
+	OfflineTime           time.Time `gorm:"column:offline_time" json:"offline_time"`
+	OfflineOperatorUserID int       `gorm:"column:offline_operator_user_id" json:"offline_operator_user_id"`
+	OfflineAccessUserID   int       `gorm:"column:offline_access_user_id" json:"offline_access_user_id"`
+	CreateTime            time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP;not null" json:"create_time"`
+	UpdateTime            time.Time `gorm:"column:update_time" json:"update_time"`
+	CreateUserID          int       `gorm:"column:create_user_id" json:"create_user_id"`
+	DeleteFlag            int       `gorm:"column:delete_flag;default:0" json:"delete_flag"`
+	DeleteTime            time.Time `gorm:"column:delete_time" json:"delete_time"`
+	DeleteUserID          int       `gorm:"column:delete_user_id" json:"delete_user_id"`
+	Remarks               string    `gorm:"column:remarks" json:"remarks"`
+}
+
+// TableName sets the table name for the struct
+func (ApplicationGlobalizationDocumentCode) TableName() string {
+	return "tb_application_globalization_document_code"
 }
 
 type TableGlobalDocument struct {

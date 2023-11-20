@@ -46,8 +46,6 @@ type IDocumentModel interface {
 
 	SearchOptionByNamespace(globalDocumentRequest *request.GlobalDocumentRequest) (map[string]string, error)
 
-	SearchApplicationById(applicationId int) (data.TableApplication, error)
-
 	SearchNamespaceById(applicationId int, appNamespaceId int) (data.TableApplicationNamespace, error)
 }
 
@@ -76,7 +74,7 @@ func (documentModel DocumentModel) ImportDocument(namespaceRequest multipart.Fil
 		return resultData, errors.New("excel文件导入行数不能超过2000，请分批导入")
 	}
 	for index, row := range rows {
-		tx := documentModel.Conn.BeginTx()
+		tx := documentModel.db.Begin()
 		if len(row) < 6 {
 			tx.Rollback()
 			resultData, _ = documentModel.getImportDataList(rows, false)
@@ -90,7 +88,7 @@ func (documentModel DocumentModel) ImportDocument(namespaceRequest multipart.Fil
 			resultData, _ = documentModel.getImportDataList(rows, false)
 			return resultData, errors.New("excel文件中必填字段存在空值，请检查后重试")
 		}
-		globalDocumentRequest := &Entity.GlobalDocumentRequest{}
+		globalDocumentRequest := &request.GlobalDocumentRequest{}
 		globalDocumentRequest.NamespaceId = convert.ToInt(row[1])
 		globalDocumentRequest.DocumentCode = row[2]
 		result, err := documentModel.SearchDocumentCode(globalDocumentRequest)
@@ -141,8 +139,8 @@ func (documentModel DocumentModel) ImportDocument(namespaceRequest multipart.Fil
 		}
 		globalDocumentRequest.DocumentId = documentId
 
-		var globalDocumentLanguages []Entity.GlobalDocumentLanguage
-		globalDocumentLanguage := &Entity.GlobalDocumentLanguage{}
+		var globalDocumentLanguages []request.GlobalDocumentLanguage
+		globalDocumentLanguage := &request.GlobalDocumentLanguage{}
 		globalDocumentLanguage.CountryIso = row[4]
 		globalDocumentLanguage.DocumentValue = row[5]
 
@@ -193,7 +191,7 @@ func (documentModel DocumentModel) getImportDataList(rows [][]string, isSuccess 
 }
 
 func (documentModel DocumentModel) CreateDocument(namespaceRequest *request.GlobalDocumentRequest) (int64, error) {
-	tx := documentModel.Conn.BeginTx()
+	tx := documentModel.db.Begin()
 	insertDocumentCodeResult, err := documentModel.Table(documentTableName).
 		WithTx(tx).
 		Insert(dialect.H{
@@ -232,7 +230,7 @@ func (documentModel DocumentModel) CreateDocument(namespaceRequest *request.Glob
 	commitError := tx.Commit()
 	if commitError != nil {
 		_ = tx.Rollback()
-		return 0, commitError
+		return 0, tx.Error
 	}
 	return insertDocumentCodeResult, err
 }
@@ -376,7 +374,7 @@ func (documentModel DocumentModel) SearchDocumentByNamespaceId(globalDocumentReq
 }
 
 func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *request.GlobalDocumentRequest) (int64, error) {
-	tx := documentModel.Conn.BeginTx()
+	tx := documentModel.db.Begin()
 	if namespaceRequest.DocumentDesc != "" {
 		_, err := documentModel.Table(documentTableName).
 			WithTx(tx).
@@ -467,14 +465,14 @@ func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *
 	commitError := tx.Commit()
 	if commitError != nil {
 		_ = tx.Rollback()
-		return 0, commitError
+		return 0, tx.Error
 	}
 	return 1, nil
 }
 
 func (documentModel DocumentModel) DeleteDocumentByDocumentId(namespaceRequest *request.GlobalDocumentRequest) (int64, error) {
 	nano := time.Now().Unix()
-	tx := documentModel.Conn.BeginTx()
+	tx := documentModel.db.Begin()
 	_, err := documentModel.Table(documentTableName).
 		WithTx(tx).
 		Where(documentIdField, "=", namespaceRequest.DocumentId).
@@ -493,7 +491,7 @@ func (documentModel DocumentModel) DeleteDocumentByDocumentId(namespaceRequest *
 	commitError := tx.Commit()
 	if commitError != nil {
 		_ = tx.Rollback()
-		return 0, commitError
+		return 0, tx.Error
 	}
 	return 1, nil
 }
@@ -712,58 +710,35 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 	return resultMap, nil
 }
 
-func (documentModel DocumentModel) SearchOptionByNamespace(globalDocumentRequest *request.GlobalDocumentRequest) (map[string]string, error) {
+func (documentModel DocumentModel) SearchOptionByNamespace(globalDocumentRequest *request.GlobalDocumentRequest) ([]data.ApplicationGlobalizationDocumentCode, error) {
 	resultMap := make(map[string]string)
-	applicationStatement := documentModel.Table(documentTableName)
-	applicationStatement.Where(applicationIdField, "=", globalDocumentRequest.ApplicationId)
-	applicationStatement.Where(namespaceIdField, "=", globalDocumentRequest.NamespaceId)
+	applicationStatement := documentModel.db.
+		Where("application_id = ? AND namespace_id = ?",
+			globalDocumentRequest.ApplicationId, globalDocumentRequest.NamespaceId)
 	if globalDocumentRequest.DocumentDesc != "" {
-		applicationStatement.Where(documentDescField, "LIKE", "%"+convert.ToString(globalDocumentRequest.DocumentDesc)+"%")
+		applicationStatement.Where("document_desc LIKE ", "%"+convert.ToString(globalDocumentRequest.DocumentDesc)+"%")
 	}
 	if globalDocumentRequest.DocumentCode != "" {
-		applicationStatement.Where(documentCodeField, "LIKE", "%"+convert.ToString(globalDocumentRequest.DocumentCode)+"%")
+		applicationStatement.Where("document_code LIKE ", "%"+convert.ToString(globalDocumentRequest.DocumentCode)+"%")
 	}
-	applicationResultMap, err := applicationStatement.All()
-	if err != nil {
-		return resultMap, err
+	var applicationCodes []data.ApplicationGlobalizationDocumentCode
+	if err := applicationStatement.Find(&applicationCodes).Error; err != nil {
+		return applicationCodes, err
 	}
-	if len(applicationResultMap) <= 0 {
-		return resultMap, errors.New("应用空间数据异常，请检查配置后重试")
+	if len(applicationCodes) <= 0 {
+		return applicationCodes, errors.New("应用空间数据异常，请检查配置后重试")
 	}
 
-	for _, namespaceDataMap := range applicationResultMap {
+	for _, namespaceDataMap := range applicationCodes {
 		resultMap[convert.ToString(namespaceDataMap["DocumentCode"])] = convert.ToString(namespaceDataMap["DocumentDesc"])
 	}
-	return resultMap, nil
-}
-
-func (documentModel DocumentModel) SearchApplicationById(applicationId int) (data.TableApplication, error) {
-	statement := documentModel.Table(applicationModelTableName).Select("*")
-	statement.Where(id, "=", applicationId)
-	resultData, err := statement.All()
-	if err != nil {
-		return data.TableApplication{}, err
-	}
-	var outputResult data.TableApplication
-	if len(resultData) <= 0 {
-		return data.TableApplication{}, err
-	}
-	_ = mapstructure.Decode(resultData[0], &outputResult)
-	return outputResult, nil
+	return applicationCodes, nil
 }
 
 func (documentModel DocumentModel) SearchNamespaceById(applicationId int, appNamespaceId int) (data.TableApplicationNamespace, error) {
-	statement := documentModel.Table(namespaceModelTableName).Select("*")
-	statement.Where(namespaceApplicationId, "=", applicationId)
-	statement.Where(namespaceId, "=", appNamespaceId)
-	resultData, err := statement.All()
-	if err != nil {
+	var application data.TableApplicationNamespace
+	if err := documentModel.db.Where("application_id = ? AND namespace_id = ?", applicationId, appNamespaceId).Find(&application).Error; err != nil {
 		return data.TableApplicationNamespace{}, err
 	}
-	if len(resultData) <= 0 {
-		return data.TableApplicationNamespace{}, err
-	}
-	var outputResult data.TableApplicationNamespace
-	_ = mapstructure.Decode(resultData[0], &outputResult)
-	return outputResult, nil
+	return application, nil
 }
