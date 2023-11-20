@@ -44,8 +44,6 @@ type IDocumentModel interface {
 
 	SearchApplicationByCountryIso(globalDocumentIsoQueryRequest *request.GlobalDocumentIsoQueryRequest) (map[string]map[string]string, error)
 
-	SearchOptionByNamespace(globalDocumentRequest *request.GlobalDocumentRequest) (map[string]string, error)
-
 	SearchNamespaceById(applicationId int, appNamespaceId int) (data.TableApplicationNamespace, error)
 }
 

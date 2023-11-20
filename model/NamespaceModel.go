@@ -11,7 +11,7 @@ import (
 type INamespaceModel interface {
 	CreateApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (int64, error)
 
-	ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TableApplicationNamespacePage, error)
+	ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TablePage, error)
 
 	SearchDocumentByNamespaceId(globalDocumentRequest *data.TableApplicationNamespace) (data.TableGlobalDocumentPage, error)
 }
@@ -31,7 +31,7 @@ func (namespace NamespaceModel) CreateApplicationNamespace(namespaceRequest *dat
 	panic("implement me")
 }
 
-func (namespace NamespaceModel) ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TableApplicationNamespacePage, error) {
+func (namespace NamespaceModel) ListApplicationNamespace(namespaceRequest *data.TableApplicationNamespace) (data.TablePage, error) {
 	//TODO implement me
 	panic("implement me")
 }
