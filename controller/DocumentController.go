@@ -50,17 +50,16 @@ func NewDocumentController() IDocumentController {
 
 // ImportGlobalizationCopyWriting 创建多语言文案/**
 func (controller DocumentController) ImportGlobalizationCopyWriting(context *gin.Context) {
-	file, _, err := context.Request.FormFile("excel")
+	_, _, err := context.Request.FormFile("excel")
 	if err != nil {
 		response.ResFail(context, "json解析异常")
 		return
 	}
-	resultData, err := controller.documentModel.ImportDocument(file)
 	if err != nil {
-		response.ResErrCliData(context, err, resultData)
+		response.ResErrCliData(context, err, nil)
 		return
 	}
-	response.ResSuccess(context, resultData)
+	response.ResSuccess(context, nil)
 }
 
 func (controller DocumentController) ExportGlobalizationCopyWriting(context *gin.Context) {
@@ -218,11 +217,29 @@ func (controller DocumentController) CommitGlobalizationCopyWriting(context *gin
 }
 
 func (controller DocumentController) ExcelHeader(f *excelize.File) *excelize.File {
-	f.SetCellValue("Sheet1", "A1", "所属应用")
-	f.SetCellValue("Sheet1", "B1", "命名空间")
-	f.SetCellValue("Sheet1", "C1", "字段CODE")
-	f.SetCellValue("Sheet1", "D1", "描述")
-	f.SetCellValue("Sheet1", "E1", "语言")
-	f.SetCellValue("Sheet1", "F1", "翻译")
+	err := f.SetCellValue("Sheet1", "A1", "所属应用")
+	if err != nil {
+		return nil
+	}
+	err = f.SetCellValue("Sheet1", "B1", "命名空间")
+	if err != nil {
+		return nil
+	}
+	err = f.SetCellValue("Sheet1", "C1", "字段CODE")
+	if err != nil {
+		return nil
+	}
+	err = f.SetCellValue("Sheet1", "D1", "描述")
+	if err != nil {
+		return nil
+	}
+	err = f.SetCellValue("Sheet1", "E1", "语言")
+	if err != nil {
+		return nil
+	}
+	err = f.SetCellValue("Sheet1", "F1", "翻译")
+	if err != nil {
+		return nil
+	}
 	return f
 }

@@ -92,16 +92,31 @@ func (ApplicationGlobalizationDocumentCode) TableName() string {
 	return "tb_application_globalization_document_code"
 }
 
+type TableGlobalDocumentValue struct {
+	DocumentId       int       `json:"documentId,omitempty"`
+	ApplicationId    int       `json:"applicationId,omitempty"`
+	ApplicationName  string    `json:"applicationName,omitempty"`
+	NamespaceId      int       `json:"namespaceId,omitempty"`
+	CountryIso       string    `json:"country_iso,omitempty"`
+	DocumentCode     string    `json:"documentCode,omitempty"`
+	CountryName      string    `json:"country_name,omitempty"`
+	DocumentValue    string    `json:"document_value,omitempty"`
+	DocumentIsOnline int       `json:"document_is_online,omitempty"`
+	CreateTime       time.Time `json:"createTime,omitempty"`
+}
+
+// TableName sets the table name for the struct
+func (TableGlobalDocumentValue) TableName() string {
+	return "tb_application_globalization_document_value"
+}
+
 type TableGlobalDocument struct {
-	DocumentId      int                           `json:"documentId,omitempty"`
-	ApplicationId   int                           `json:"applicationId,omitempty"`
-	ApplicationName string                        `json:"applicationName,omitempty"`
-	NamespaceId     int                           `json:"namespaceId,omitempty"`
-	NamespaceName   string                        `json:"namespaceName,omitempty"`
-	DocumentDesc    string                        `json:"documentDesc,omitempty"`
-	DocumentCode    string                        `json:"documentCode,omitempty"`
-	Documents       []TableGlobalDocumentLanguage `json:"documents,omitempty"`
-	CreateTime      string                        `json:"createTime,omitempty"`
+	Id            int                           `json:"id,omitempty"`
+	ApplicationId int                           `json:"applicationId,omitempty"`
+	NamespaceId   int                           `json:"namespaceId,omitempty"`
+	DocumentDesc  int                           `json:"documentDesc,omitempty"`
+	DocumentCode  string                        `json:"documentCode,omitempty"`
+	Documents     []TableGlobalDocumentLanguage `json:"documents,omitempty"`
 }
 
 type TableGlobalDocumentLanguage struct {

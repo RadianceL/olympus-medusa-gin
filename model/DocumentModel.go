@@ -5,9 +5,7 @@ import (
 	"errors"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
-	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
-	"mime/multipart"
 	"olympus-medusa/common"
 	"olympus-medusa/common/convert"
 	"olympus-medusa/common/language"
@@ -20,9 +18,9 @@ import (
 )
 
 type IDocumentModel interface {
-	ImportDocument(namespaceRequest multipart.File) (data.ExportGlobalDocument, error)
-
-	getImportDataList(rows [][]string, isSuccess bool) (data.ExportGlobalDocument, error)
+	//ImportDocument(namespaceRequest multipart.File) (data.ExportGlobalDocument, error)
+	//
+	//getImportDataList(rows [][]string, isSuccess bool) (data.ExportGlobalDocument, error)
 
 	CreateDocument(namespaceRequest *request.GlobalDocumentRequest) (int64, error)
 
@@ -57,172 +55,53 @@ func NewDocumentModel() IDocumentModel {
 	return DocumentModel{db: common.GetDB(), logger: config.GetLogger()}
 }
 
-func (documentModel DocumentModel) ImportDocument(namespaceRequest multipart.File) (data.ExportGlobalDocument, error) {
-	xlsx, err := excelize.OpenReader(namespaceRequest)
-	var resultData data.ExportGlobalDocument
-	if err != nil {
-		resultData.ImportFailureList = make([]data.TableGlobalDocumentExcel, 0)
-		resultData.ImportSuccessList = make([]data.TableGlobalDocumentExcel, 0)
-		resultData.Success = false
-		return resultData, err
-	}
-	rows, _ := xlsx.GetRows("后端服务")
-	if len(rows) > 2000 {
-		resultData, _ = documentModel.getImportDataList(rows, false)
-		return resultData, errors.New("excel文件导入行数不能超过2000，请分批导入")
-	}
-	for index, row := range rows {
-		tx := documentModel.db.Begin()
-		if len(row) < 6 {
-			tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("excel文件中必填字段存在空值，请检查后重试")
-		}
-		if index == 0 {
-			continue
-		}
-		if row[0] == "" || row[1] == "" || row[2] == "" || row[4] == "" || row[5] == "" {
-			tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("excel文件中必填字段存在空值，请检查后重试")
-		}
-		globalDocumentRequest := &request.GlobalDocumentRequest{}
-		globalDocumentRequest.NamespaceId = convert.ToInt(row[1])
-		globalDocumentRequest.DocumentCode = row[2]
-		result, err := documentModel.SearchDocumentCode(globalDocumentRequest)
-		if err != nil {
-			tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("excel文件导入查重复报错")
-		}
-
-		languageCountry := language.FindLanguage(row[4])
-		if languageCountry == nil {
-			_ = tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("未识别的国家编码，请检查后重试")
-		}
-
-		app, err := documentModel.SearchApplicationById(convert.ToInt(row[0]))
-		if app.ApplicationName == "" {
-			tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("excel文件中应用ID不存在，请检查后重试")
-		}
-		space, err := documentModel.SearchNamespaceById(convert.ToInt(row[0]), convert.ToInt(row[1]))
-		if space.NamespaceName == "" {
-			tx.Rollback()
-			resultData, _ = documentModel.getImportDataList(rows, false)
-			return resultData, errors.New("excel文件中命名空间ID不存在，请检查后重试")
-		}
-		var documentId int
-		if result == nil {
-			insertDocumentCodeResult, err := documentModel.Table(documentTableName).
-				WithTx(tx).
-				Insert(dialect.H{
-					applicationIdField: row[0],
-					namespaceIdField:   globalDocumentRequest.NamespaceId,
-					onlineTimeField:    time.Now(),
-					documentCodeField:  globalDocumentRequest.DocumentCode,
-					documentDescField:  row[3],
-					createUserIdField:  0,
-				})
-			if err != nil {
-				tx.Rollback()
-				return resultData, err
-			}
-			documentId = convert.ToInt(insertDocumentCodeResult)
-		} else {
-			documentId = result.DocumentId
-		}
-		globalDocumentRequest.DocumentId = documentId
-
-		var globalDocumentLanguages []request.GlobalDocumentLanguage
-		globalDocumentLanguage := &request.GlobalDocumentLanguage{}
-		globalDocumentLanguage.CountryIso = row[4]
-		globalDocumentLanguage.DocumentValue = row[5]
-
-		globalDocumentLanguages = append(globalDocumentLanguages, *globalDocumentLanguage)
-		globalDocumentRequest.DocumentDesc = row[3]
-		globalDocumentRequest.Documents = globalDocumentLanguages
-		tx.Commit()
-		documentModel.UpdateDocumentByDocumentId(globalDocumentRequest)
-
-	}
-	return documentModel.getImportDataList(rows, true)
-}
-
-func (documentModel DocumentModel) getImportDataList(rows [][]string, isSuccess bool) (data.ExportGlobalDocument, error) {
-	var resultData data.ExportGlobalDocument
-	var successList []data.TableGlobalDocumentExcel
-	var failureList []data.TableGlobalDocumentExcel
-	for index, row := range rows {
-		if len(row) < 6 {
-			continue
-		}
-		if index == 0 {
-			continue
-		}
-		//处理导入数据，返回给前端
-		var documentResult data.TableGlobalDocumentExcel
-		documentResult.ApplicationId = convert.ToInt(row[0])
-		documentResult.NamespaceId = convert.ToInt(row[1])
-		documentResult.DocumentCode = row[2]
-		documentResult.DocumentDesc = row[3]
-		documentResult.CountryIso = row[4]
-		documentResult.DocumentValue = row[5]
-		if isSuccess {
-			successList = append(successList, documentResult)
-		} else {
-			failureList = append(successList, documentResult)
-		}
-	}
-	if successList != nil {
-		resultData.ImportSuccessList = successList
-		resultData.ImportFailureList = make([]data.TableGlobalDocumentExcel, 0)
-	} else {
-		resultData.ImportSuccessList = make([]data.TableGlobalDocumentExcel, 0)
-		resultData.ImportFailureList = failureList
-	}
-	resultData.Success = isSuccess
-	return resultData, nil
-}
-
-func (documentModel DocumentModel) CreateDocument(namespaceRequest *request.GlobalDocumentRequest) (int64, error) {
+func (documentModel DocumentModel) CreateDocument(globalDocumentRequest *request.GlobalDocumentRequest) (int64, error) {
 	tx := documentModel.db.Begin()
-	insertDocumentCodeResult, err := documentModel.Table(documentTableName).
-		WithTx(tx).
-		Insert(dialect.H{
-			applicationIdField: namespaceRequest.ApplicationId,
-			namespaceIdField:   namespaceRequest.NamespaceId,
-			onlineTimeField:    time.Now(),
-			documentCodeField:  namespaceRequest.DocumentCode,
-			documentDescField:  namespaceRequest.DocumentDesc,
-			createUserIdField:  0,
-		})
-	if err != nil {
-		_ = tx.Rollback()
-		return 0, err
+	documentCode := data.ApplicationGlobalizationDocumentCode{
+		ApplicationID:        globalDocumentRequest.ApplicationId,
+		NamespaceID:          globalDocumentRequest.NamespaceId,
+		DocumentCode:         globalDocumentRequest.DocumentCode,
+		DocumentDesc:         globalDocumentRequest.DocumentDesc,
+		OnlineTime:           time.Now(),
+		OnlineOperatorUserID: 0,
+		DeleteFlag:           0,
+		IsEnable:             1,
+		CreateUserID:         0,
+		CreateTime:           time.Now(),
+		DeleteUserID:         0,
 	}
-	documents := namespaceRequest.Documents
+	insertDocumentCodeTx := documentModel.db.
+		Table("tb_application_globalization_document_code").
+		Create(&documentCode)
+
+	if insertDocumentCodeTx.Error != nil {
+		_ = tx.Rollback()
+		return 0, insertDocumentCodeTx.Error
+	}
+
+	documents := globalDocumentRequest.Documents
 	for _, document := range documents {
 		languageCountry := language.FindLanguage(document.CountryIso)
 		if languageCountry == nil {
 			_ = tx.Rollback()
 			return 0, errors.New("未识别的国家编码，请检查后重试")
 		}
-		_, err := documentModel.Table(documentValueTableName).
-			WithTx(tx).
-			Insert(dialect.H{
-				documentIdField:    insertDocumentCodeResult,
-				namespaceIdField:   namespaceRequest.NamespaceId,
-				countryIsoField:    document.CountryIso,
-				countryNameField:   languageCountry.CountryName,
-				documentValueField: document.DocumentValue,
-			})
-		if err != nil {
+		documentValue := data.TableGlobalDocumentValue{
+			DocumentId:       documentCode.DocumentID,
+			ApplicationId:    documentCode.ApplicationID,
+			NamespaceId:      documentCode.NamespaceID,
+			CountryIso:       document.CountryIso,
+			CountryName:      languageCountry.CountryName,
+			DocumentCode:     documentCode.DocumentCode,
+			DocumentValue:    document.DocumentValue,
+			DocumentIsOnline: 1,
+			CreateTime:       time.Now(),
+		}
+		documentValueTx := documentModel.db.
+			Create(&documentValue)
+		if documentValueTx.Error != nil {
 			_ = tx.Rollback()
-			return 0, err
+			return 0, documentValueTx.Error
 		}
 	}
 	commitError := tx.Commit()
@@ -230,7 +109,7 @@ func (documentModel DocumentModel) CreateDocument(namespaceRequest *request.Glob
 		_ = tx.Rollback()
 		return 0, tx.Error
 	}
-	return insertDocumentCodeResult, err
+	return tx.RowsAffected, nil
 }
 
 func (documentModel DocumentModel) SearchDocumentValue(globalDocumentRequest *request.GlobalDocumentRequest) (arr []interface{}) {
