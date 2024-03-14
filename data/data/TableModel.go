@@ -28,44 +28,6 @@ func (TableApplication) TableName() string {
 	return "tb_application"
 }
 
-type TablePage struct {
-	TotalSize            int64                       `json:"totalSize,omitempty"`
-	ApplicationNamespace []TableApplicationNamespace `json:"dataList"`
-}
-
-type TableApplicationNamespace struct {
-	ApplicationId          int    `json:"applicationId,omitempty"`
-	NamespaceId            int    `json:"namespaceId,omitempty"`
-	NamespaceCode          string `json:"namespaceCode,omitempty"`
-	NamespaceName          string `json:"namespaceName,omitempty"`
-	NamespacePath          string `json:"namespacePath,omitempty"`
-	NamespaceParentId      int    `json:"namespaceParentId,omitempty"`
-	NamespaceApplicationId int    `json:"namespaceApplicationId,omitempty"`
-	CreateUserId           int    `json:"createUserId,omitempty"`
-}
-
-type TableGlobalDocumentPage struct {
-	TotalSize      int64                 `json:"totalSize,omitempty"`
-	GlobalDocument []TableGlobalDocument `json:"dataList"`
-}
-
-type ExportGlobalDocument struct {
-	ImportSuccessList []TableGlobalDocumentExcel `json:"importSuccessList"`
-	ImportFailureList []TableGlobalDocumentExcel `json:"importFailureList"`
-	Success           bool                       `json:"success,omitempty"`
-}
-
-type TableGlobalDocumentExcel struct {
-	ApplicationId   int    `json:"applicationId,omitempty"`
-	ApplicationName string `json:"applicationName,omitempty"`
-	NamespaceId     int    `json:"namespaceId,omitempty"`
-	NamespaceName   string `json:"namespaceName,omitempty"`
-	DocumentCode    string `json:"documentCode,omitempty"`
-	CountryIso      string `json:"countryIso,omitempty"`
-	CountryName     string `json:"countryName,omitempty"`
-	DocumentValue   string `json:"documentValue,omitempty"`
-	DocumentDesc    string `json:"documentDesc,omitempty"`
-}
 type ApplicationGlobalizationDocumentCode struct {
 	DocumentID            int       `gorm:"column:document_id;primaryKey;autoIncrement" json:"document_id"`
 	ApplicationID         int       `gorm:"column:application_id;not null" json:"application_id"`
@@ -93,37 +55,21 @@ func (ApplicationGlobalizationDocumentCode) TableName() string {
 }
 
 type TableGlobalDocumentValue struct {
-	DocumentId       int       `json:"documentId,omitempty"`
-	ApplicationId    int       `json:"applicationId,omitempty"`
-	ApplicationName  string    `json:"applicationName,omitempty"`
-	NamespaceId      int       `json:"namespaceId,omitempty"`
-	CountryIso       string    `json:"country_iso,omitempty"`
-	DocumentCode     string    `json:"documentCode,omitempty"`
-	CountryName      string    `json:"country_name,omitempty"`
-	DocumentValue    string    `json:"document_value,omitempty"`
-	DocumentIsOnline int       `json:"document_is_online,omitempty"`
-	CreateTime       time.Time `json:"createTime,omitempty"`
+	Id                 int       `json:"Id,omitempty"`
+	DocumentId         int       `json:"documentId,omitempty"`
+	ApplicationId      int       `json:"applicationId,omitempty"`
+	ApplicationName    string    `json:"applicationName,omitempty"`
+	NamespaceId        int       `json:"namespaceId,omitempty"`
+	CountryIso         string    `json:"country_iso,omitempty"`
+	DocumentCode       string    `json:"documentCode,omitempty"`
+	CountryName        string    `json:"country_name,omitempty"`
+	DocumentValue      string    `json:"document_value,omitempty"`
+	LastUpdateDocument string    `json:"lastUpdateDocument,omitempty"`
+	DocumentIsOnline   int       `json:"document_is_online,omitempty"`
+	CreateTime         time.Time `json:"createTime,omitempty"`
 }
 
 // TableName sets the table name for the struct
 func (TableGlobalDocumentValue) TableName() string {
 	return "tb_application_globalization_document_value"
-}
-
-type TableGlobalDocument struct {
-	Id            int                           `json:"id,omitempty"`
-	ApplicationId int                           `json:"applicationId,omitempty"`
-	NamespaceId   int                           `json:"namespaceId,omitempty"`
-	DocumentDesc  int                           `json:"documentDesc,omitempty"`
-	DocumentCode  string                        `json:"documentCode,omitempty"`
-	Documents     []TableGlobalDocumentLanguage `json:"documents,omitempty"`
-}
-
-type TableGlobalDocumentLanguage struct {
-	Id                 int    `json:"documentId,omitempty"`
-	CountryIso         string `json:"countryIso,omitempty"`
-	DocumentCode       string `json:"documentCode,omitempty"`
-	DocumentValue      string `json:"documentValue,omitempty"`
-	LastUpdateDocument string `json:"lastUpdateDocument,omitempty"`
-	CreateTime         string `json:"createTime,omitempty"`
 }

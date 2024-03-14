@@ -51,6 +51,37 @@ type DocumentModel struct {
 	db     *gorm.DB
 }
 
+const (
+	// ApplicationModelTableName tb_application
+	documentTableName          = "tb_application_globalization_document_code"
+	applicationIdField         = "application_id"
+	namespaceIdField           = "namespace_id"
+	documentCodeField          = "document_code"
+	documentDescField          = "document_desc"
+	isEnableField              = "is_enable"
+	onlineTimeField            = "online_time"
+	onlineOperatorUserIdField  = "online_operator_user_id"
+	offlineTimeField           = "offline_time"
+	offlineOperatorUserIdField = "offline_operator_user_id"
+	offlineAccessUserIdField   = "offline_access_user_id"
+	createTimeField            = "create_time"
+	createUserIdField          = "create_user_id"
+	deleteFlagField            = "delete_flag"
+	deleteTimeField            = "delete_time"
+	deleteUserIdField          = "delete_user_id"
+	remarksField               = "remarks"
+
+	documentValueTableName  = "tb_application_globalization_document_value"
+	documentIdField         = "document_id"
+	countryIsoField         = "country_iso"
+	countryNameField        = "country_name"
+	documentValueField      = "document_value"
+	documentIsOnlineField   = "document_is_online"
+	updateTimeField         = "update_time"
+	updateUserIdField       = "update_user_id"
+	lastUpdateDocumentField = "last_update_document"
+)
+
 func NewDocumentModel() IDocumentModel {
 	return DocumentModel{db: common.GetDB(), logger: config.GetLogger()}
 }
@@ -61,7 +92,7 @@ func (documentModel DocumentModel) CreateDocument(globalDocumentRequest *request
 		ApplicationID:        globalDocumentRequest.ApplicationId,
 		NamespaceID:          globalDocumentRequest.NamespaceId,
 		DocumentCode:         globalDocumentRequest.DocumentCode,
-		DocumentDesc:         globalDocumentRequest.DocumentDesc,
+		DocumentDesc:         globalDocumentRequest.DocumentValue,
 		OnlineTime:           time.Now(),
 		OnlineOperatorUserID: 0,
 		DeleteFlag:           0,
@@ -113,137 +144,132 @@ func (documentModel DocumentModel) CreateDocument(globalDocumentRequest *request
 }
 
 func (documentModel DocumentModel) SearchDocumentValue(globalDocumentRequest *request.GlobalDocumentRequest) (arr []interface{}) {
-	statementValue := documentModel.Table(documentValueTableName).Select("*")
-	statementValue.Where("document_value", "LIKE", "%"+globalDocumentRequest.DocumentDesc+"%")
-	documentValueMaps, _ := statementValue.All()
+	var documentValue []data.TableGlobalDocumentValue
 	var valueArr []interface{}
-	for _, document := range documentValueMaps {
-		var documentResult data.TableGlobalDocument
-		_ = mapstructure.Decode(document, &documentResult)
-		valueArr = append(valueArr, documentResult.DocumentId)
+	if err := documentModel.db.Where("document_value LIKE ?", "%"+globalDocumentRequest.DocumentValue+"%").
+		Find(&documentValue).
+		Select("*").Error; err != nil {
+		return valueArr
+	}
+	for _, document := range documentValue {
+		valueArr = append(valueArr, document.DocumentId)
 	}
 	return valueArr
 }
 
 func (documentModel DocumentModel) QueryDocument(globalDocumentRequest *request.GlobalDocumentRequest) ([]data.TableGlobalDocumentExcel, error) {
-	statement := documentModel.Table(documentValueTableName).Select("*")
-	statement.LeftJoin(documentTableName, documentTableName+"."+documentIdField, "=", documentValueTableName+"."+documentIdField)
-	statement.LeftJoin(applicationModelTableName, applicationModelTableName+"."+id, "=", documentTableName+"."+applicationIdField)
-	statement.LeftJoin(namespaceModelTableName, namespaceModelTableName+"."+namespaceIdField, "=", documentTableName+"."+namespaceIdField)
-	statement.Where(documentTableName+"."+deleteFlagField, "=", 0)
+	var resultData []data.TableGlobalDocumentExcel
+	tx := documentModel.db.Table("tb_application_globalization_document_code").
+		Joins("LEFT JOIN "+
+			"tb_application_globalization_document_code "+
+			"ON tb_application_globalization_document_code.document_id = tb_application_globalization_document_value.document_id").
+		Joins("LEFT JOIN "+
+			"tb_application "+
+			"ON tb_application.id = tb_application_globalization_document_value.document_id").
+		Joins("LEFT JOIN "+
+			"tb_application_namespace "+
+			"ON tb_application_namespace.namespace_id = tb_application_globalization_document_code.namespace_id").
+		Where("tb_application_globalization_document_code.delete_flag = ?", 0)
 	if globalDocumentRequest.NamespaceId != 0 {
-		statement.Where(documentTableName+"."+namespaceIdField, "=", globalDocumentRequest.NamespaceId)
+		tx.Where("tb_application_globalization_document_code.namespace_id = ?", globalDocumentRequest.NamespaceId)
 	}
 	if globalDocumentRequest.ApplicationId != 0 {
-		statement.Where(documentTableName+"."+applicationIdField, "=", globalDocumentRequest.ApplicationId)
+		tx.Where("tb_application_globalization_document_code.application_id = ?", globalDocumentRequest.ApplicationId)
 	}
 	if len(globalDocumentRequest.DocumentIds) > 0 {
-		statement.WhereIn(documentTableName+"."+documentIdField, globalDocumentRequest.DocumentIds)
+		tx.Where("tb_application_globalization_document_code.document_id IN ?", globalDocumentRequest.DocumentIds)
 	}
 	if globalDocumentRequest.DocumentCode != "" {
-		statement.Where(documentCodeField, "LIKE", "%"+globalDocumentRequest.DocumentCode+"%")
-	}
-	if globalDocumentRequest.DocumentDesc != "" {
-		var arr = documentModel.SearchDocumentValue(globalDocumentRequest)
-		if arr == nil || len(arr) <= 0 {
-			arr = make([]interface{}, 1)
-			arr[0] = 0
-		}
-		statement.WhereIn(documentTableName+"."+documentIdField, arr)
+		tx.Where("tb_application_globalization_document_code.document_code LIKE", "%"+globalDocumentRequest.DocumentCode+"%")
 	}
 
-	documentMaps, err := statement.All()
-
-	var resultData []data.TableGlobalDocumentExcel
-	if err != nil {
-		return resultData, err
+	if globalDocumentRequest.DocumentValue != "" {
+		tx.Where("tb_application_globalization_document_code.document_id LIKE ?", globalDocumentRequest.DocumentValue)
 	}
-	if len(documentMaps) <= 0 {
-		return resultData, nil
-	}
-	for _, document := range documentMaps {
-		var documentResult data.TableGlobalDocumentExcel
-		_ = mapstructure.Decode(document, &documentResult)
-		resultData = append(resultData, documentResult)
+	if err := tx.Find(&resultData).Error; err != nil {
+		return []data.TableGlobalDocumentExcel{}, err
 	}
 	return resultData, nil
 }
 
 func (documentModel DocumentModel) SearchDocumentByNamespaceId(globalDocumentRequest *request.GlobalDocumentRequest) (data.TableGlobalDocumentPage, error) {
-	statement := documentModel.Table(documentTableName).Select("*")
-	statement.LeftJoin(applicationModelTableName, applicationModelTableName+"."+id, "=", documentTableName+"."+applicationIdField)
-	statement.LeftJoin(namespaceModelTableName, namespaceModelTableName+"."+namespaceIdField, "=", documentTableName+"."+namespaceIdField)
-	statement.Where(documentTableName+"."+deleteFlagField, "=", 0)
+	tx := documentModel.db.Table(documentTableName).
+		Joins("LEFT JOIN "+
+			documentTableName+
+			"ON "+documentTableName+".document_id = tb_application_globalization_document_value.document_id").
+		Joins("LEFT JOIN "+
+			"tb_application "+
+			"ON tb_application.id = tb_application_globalization_document_value.document_id").
+		Joins("LEFT JOIN "+
+			"tb_application_namespace "+
+			"ON tb_application_namespace.namespace_id = "+documentTableName+".namespace_id").
+		Where(documentTableName+".delete_flag = ?", 0)
+
 	if globalDocumentRequest.NamespaceId != 0 {
-		statement.Where(documentTableName+"."+namespaceIdField, "=", globalDocumentRequest.NamespaceId)
+		tx.Where(documentTableName+"."+namespaceIdField, "=", globalDocumentRequest.NamespaceId)
 	}
 	if globalDocumentRequest.ApplicationId != 0 {
-		statement.Where(documentTableName+"."+applicationIdField, "=", globalDocumentRequest.ApplicationId)
+		tx.Where(documentTableName+"."+applicationIdField, "=", globalDocumentRequest.ApplicationId)
 	}
 	if globalDocumentRequest.DocumentCode != "" {
-		statement.Where(documentCodeField, "LIKE", "%"+globalDocumentRequest.DocumentCode+"%")
+		tx.Where(documentCodeField+"LIKE ?", "%"+globalDocumentRequest.DocumentCode+"%")
 	}
 	var arr = make([]interface{}, 0)
-	if globalDocumentRequest.DocumentDesc != "" {
+	if globalDocumentRequest.DocumentValue != "" {
 		arr = documentModel.SearchDocumentValue(globalDocumentRequest)
 		if arr == nil || len(arr) <= 0 {
 			arr = make([]interface{}, 1)
 			arr[0] = 0
 		}
-		statement.WhereIn(documentIdField, arr)
+		tx.Where(documentIdField+"IN ?", arr)
 	}
 	if globalDocumentRequest.PageIndex != 0 && globalDocumentRequest.PageSize != 0 {
-		statement.Skip((globalDocumentRequest.PageIndex - 1) * globalDocumentRequest.PageSize)
-		statement.Take(globalDocumentRequest.PageSize)
+		tx.Offset((globalDocumentRequest.PageIndex - 1) * globalDocumentRequest.PageSize)
+		tx.Limit(globalDocumentRequest.PageSize)
 	}
+	var documentList []data.TableGlobalDocument
+	tx.Find(&documentList)
 
-	documentMaps, err := statement.All()
-	statementCount := documentModel.Table(documentTableName)
-	statementCount.Where(documentTableName+"."+deleteFlagField, "=", 0)
+	countTx := documentModel.db.Table(documentTableName)
+	countTx.Where(documentTableName+"."+deleteFlagField, "=", 0)
 	if globalDocumentRequest.NamespaceId != 0 {
-		statementCount.Where(documentTableName+"."+namespaceIdField, "=", globalDocumentRequest.NamespaceId)
+		countTx.Where(documentTableName+"."+namespaceIdField, "=", globalDocumentRequest.NamespaceId)
 	}
 	if globalDocumentRequest.ApplicationId != 0 {
-		statementCount.Where(documentTableName+"."+applicationIdField, "=", globalDocumentRequest.ApplicationId)
+		countTx.Where(documentTableName+"."+applicationIdField, "=", globalDocumentRequest.ApplicationId)
 	}
 	if globalDocumentRequest.DocumentCode != "" {
-		statementCount.Where(documentCodeField, "LIKE", "%"+globalDocumentRequest.DocumentCode+"%")
+		countTx.Where(documentCodeField, "LIKE", "%"+globalDocumentRequest.DocumentCode+"%")
 	}
 	if arr != nil && len(arr) > 0 {
-		statementCount.WhereIn(documentIdField, arr)
+		countTx.Where(documentIdField, arr)
 	}
-	count, _ := statementCount.Count()
+
+	var count int64
+	countTx.Count(&count)
+
 	var resultData data.TableGlobalDocumentPage
-	if err != nil {
+	if tx.Error != nil {
 		resultData.TotalSize = count
-		return resultData, err
+		return resultData, tx.Error
 	}
-	if len(documentMaps) <= 0 {
+	if len(documentList) <= 0 {
 		resultData.TotalSize = count
 		resultData.GlobalDocument = make([]data.TableGlobalDocument, 0)
 		return resultData, nil
 	}
-
 	var resultList []data.TableGlobalDocument
-	for _, document := range documentMaps {
-		var documentResult data.TableGlobalDocument
-		_ = mapstructure.Decode(document, &documentResult)
-
-		queryDocumentValueStatement := documentModel.Table(documentValueTableName).Select("*")
-		queryDocumentValueStatement.Where(documentIdField, "=", documentResult.DocumentId)
-		documentValueResultDataMaps, documentValueErr := queryDocumentValueStatement.All()
-		if documentValueErr != nil {
+	for _, document := range documentList {
+		var result []data.TableGlobalDocumentLanguage
+		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName)
+		queryDocumentValueStatement.Where(documentIdField, "=", document.DocumentId)
+		queryDocumentValueStatement.Find(&result)
+		if queryDocumentValueStatement.Error != nil {
 			resultData.TotalSize = count
 			return resultData, nil
 		}
-		var result []data.TableGlobalDocumentLanguage
-		for _, documentValueResultData := range documentValueResultDataMaps {
-			var tableGlobalDocumentLanguageOutputResult data.TableGlobalDocumentLanguage
-			_ = mapstructure.Decode(documentValueResultData, &tableGlobalDocumentLanguageOutputResult)
-			result = append(result, tableGlobalDocumentLanguageOutputResult)
-		}
-		documentResult.Documents = result
-		resultList = append(resultList, documentResult)
+		document.Documents = result
+		resultList = append(resultList, document)
 	}
 	resultData.TotalSize = count
 	resultData.GlobalDocument = resultList
@@ -251,99 +277,82 @@ func (documentModel DocumentModel) SearchDocumentByNamespaceId(globalDocumentReq
 }
 
 func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *request.GlobalDocumentRequest) (int64, error) {
-	tx := documentModel.db.Begin()
-	if namespaceRequest.DocumentDesc != "" {
-		_, err := documentModel.Table(documentTableName).
-			WithTx(tx).
-			Where(documentIdField, "=", namespaceRequest.DocumentId).
-			Update(dialect.H{
-				documentDescField: namespaceRequest.DocumentDesc,
-			})
-		if err != nil {
-			if err.Error() != "no affect row" {
-				_ = tx.Rollback()
-				return 0, err
-			}
-		}
-	}
-	documents := namespaceRequest.Documents
-	for _, document := range documents {
-		languageCountry := language.FindLanguage(document.CountryIso)
-		if languageCountry == nil {
-			_ = tx.Rollback()
-			return 0, errors.New("未识别的国家编码，请检查后重试")
-		}
-		queryDocumentValueStatement := documentModel.Table(documentValueTableName).Select("*")
-		queryDocumentValueStatement.Where(documentIdField, "=", namespaceRequest.DocumentId)
-		queryDocumentValueStatement.Where(countryIsoField, "=", document.CountryIso)
-		documentValueResultDataMaps, documentValueErr := queryDocumentValueStatement.All()
-		if documentValueErr != nil {
-			return 0, errors.New("更新多语言文案语言编码查重异常，请稍后重试")
-		}
-		if len(documentValueResultDataMaps) <= 0 {
+	err := documentModel.db.Transaction(func(tx *gorm.DB) error {
+		var applicationGlobalizationDocumentCode data.ApplicationGlobalizationDocumentCode
+		tx.Model(&applicationGlobalizationDocumentCode).
+			Where(documentIdField+"=", namespaceRequest.DocumentId).
+			Update(documentDescField, namespaceRequest.DocumentValue)
+
+		documents := namespaceRequest.Documents
+		for _, document := range documents {
 			languageCountry := language.FindLanguage(document.CountryIso)
 			if languageCountry == nil {
-				_ = tx.Rollback()
-				return 0, errors.New("未识别的国家编码，请检查后重试")
+				return errors.New("未识别的国家编码，请检查后重试")
 			}
-			_, err := documentModel.Table(documentValueTableName).
-				WithTx(tx).
-				Insert(dialect.H{
-					documentIdField:    namespaceRequest.DocumentId,
-					namespaceIdField:   namespaceRequest.NamespaceId,
-					countryIsoField:    document.CountryIso,
-					countryNameField:   languageCountry.CountryName,
-					documentValueField: document.DocumentValue,
-				})
-			if err != nil {
-				_ = tx.Rollback()
-				return 0, err
-			}
-		} else {
-			var documentResultDataMaps map[string]interface{}
-			if document.DocumentId == 0 {
-				queryDocumentValueStatement := documentModel.Table(documentValueTableName).Select("*")
-				queryDocumentValueStatement.Where(documentIdField, "=", namespaceRequest.DocumentId)
-				queryDocumentValueStatement.Where(namespaceIdField, "=", namespaceRequest.NamespaceId)
-				queryDocumentValueStatement.Where(countryIsoField, "=", document.CountryIso)
 
-				documentResultDataMaps, documentValueErr = queryDocumentValueStatement.First()
-				if documentValueErr != nil {
+			var tableGlobalDocumentLanguageList []data.TableGlobalDocumentLanguage
+			queryDocumentValueStatement := tx.Table(documentValueTableName).Select("*")
+			queryDocumentValueStatement.Where(documentIdField+"=", namespaceRequest.DocumentId)
+			queryDocumentValueStatement.Where(countryIsoField+"=", document.CountryIso)
+			queryDocumentValueStatement.Find(&tableGlobalDocumentLanguageList)
+
+			if queryDocumentValueStatement.Error != nil {
+				return errors.New("更新多语言文案语言编码查重异常，请稍后重试")
+			}
+			if len(tableGlobalDocumentLanguageList) <= 0 {
+				languageCountry := language.FindLanguage(document.CountryIso)
+				if languageCountry == nil {
 					_ = tx.Rollback()
-					return 0, documentValueErr
+					return errors.New("未识别的国家编码，请检查后重试")
 				}
-
+				documentValue := data.TableGlobalDocumentValue{
+					DocumentId:    namespaceRequest.DocumentId,
+					NamespaceId:   namespaceRequest.NamespaceId,
+					CountryIso:    document.CountryIso,
+					CountryName:   languageCountry.CountryName,
+					DocumentValue: document.DocumentValue,
+				}
+				createDocumentValueStatement := tx.Create(&documentValue)
+				if createDocumentValueStatement.Error != nil {
+					return createDocumentValueStatement.Error
+				}
 			} else {
-				queryDocumentValueStatement := documentModel.Table(documentValueTableName).Select("*")
-				queryDocumentValueStatement.Where(id, "=", document.DocumentId)
-				documentResultDataMaps, documentValueErr = queryDocumentValueStatement.First()
-				if documentValueErr != nil {
-					_ = tx.Rollback()
-					return 0, documentValueErr
+				var tableGlobalDocumentValueResult data.TableGlobalDocumentValue
+				if document.DocumentId == 0 {
+					queryDocumentValueItemStatement := tx.Table(documentValueTableName)
+					queryDocumentValueItemStatement.Where(documentIdField+"=", namespaceRequest.DocumentId)
+					queryDocumentValueItemStatement.Where(namespaceIdField+"=", namespaceRequest.NamespaceId)
+					queryDocumentValueItemStatement.Where(countryIsoField+"=", document.CountryIso)
+					queryDocumentValueItemStatement = queryDocumentValueStatement.First(&applicationGlobalizationDocumentCode)
+
+					if queryDocumentValueItemStatement.Error != nil {
+						return queryDocumentValueItemStatement.Error
+					}
+				} else {
+					documentResultDataResult := tx.Find(&applicationGlobalizationDocumentCode, "id=?", document.DocumentId)
+					if documentResultDataResult.Error != nil {
+						return documentResultDataResult.Error
+					}
 				}
-			}
-			var tableGlobalDocumentLanguageOutputResult data.TableGlobalDocumentLanguage
-			_ = mapstructure.Decode(documentResultDataMaps, &tableGlobalDocumentLanguageOutputResult)
-			_, err := documentModel.Table(documentValueTableName).
-				WithTx(tx).
-				Where(id, "=", tableGlobalDocumentLanguageOutputResult.Id).
-				Update(dialect.H{
-					documentValueField:      document.DocumentValue,
-					lastUpdateDocumentField: tableGlobalDocumentLanguageOutputResult.DocumentValue,
-				})
-			if err != nil {
-				if err.Error() != "no affect row" {
-					_ = tx.Rollback()
-					return 0, err
+				updateDocumentValueStatement := tx.Model(data.TableGlobalDocumentValue{}).
+					Where("id =", tableGlobalDocumentValueResult.Id).
+					Updates(data.TableGlobalDocumentValue{
+						DocumentValue:      document.DocumentValue,
+						LastUpdateDocument: tableGlobalDocumentValueResult.DocumentValue,
+					})
+				if updateDocumentValueStatement.Error != nil {
+					if updateDocumentValueStatement.Error.Error() != "no affect row" {
+						return updateDocumentValueStatement.Error
+					}
 				}
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
 	}
-	commitError := tx.Commit()
-	if commitError != nil {
-		_ = tx.Rollback()
-		return 0, tx.Error
-	}
+
 	return 1, nil
 }
 
@@ -592,8 +601,8 @@ func (documentModel DocumentModel) SearchOptionByNamespace(globalDocumentRequest
 	applicationStatement := documentModel.db.
 		Where("application_id = ? AND namespace_id = ?",
 			globalDocumentRequest.ApplicationId, globalDocumentRequest.NamespaceId)
-	if globalDocumentRequest.DocumentDesc != "" {
-		applicationStatement.Where("document_desc LIKE ", "%"+convert.ToString(globalDocumentRequest.DocumentDesc)+"%")
+	if globalDocumentRequest.DocumentValue != "" {
+		applicationStatement.Where("document_desc LIKE ", "%"+convert.ToString(globalDocumentRequest.DocumentValue)+"%")
 	}
 	if globalDocumentRequest.DocumentCode != "" {
 		applicationStatement.Where("document_code LIKE ", "%"+convert.ToString(globalDocumentRequest.DocumentCode)+"%")
@@ -607,7 +616,7 @@ func (documentModel DocumentModel) SearchOptionByNamespace(globalDocumentRequest
 	}
 
 	for _, namespaceDataMap := range applicationCodes {
-		resultMap[convert.ToString(namespaceDataMap["DocumentCode"])] = convert.ToString(namespaceDataMap["DocumentDesc"])
+		resultMap[convert.ToString(namespaceDataMap.DocumentCode)] = convert.ToString(namespaceDataMap.DocumentDesc)
 	}
 	return applicationCodes, nil
 }

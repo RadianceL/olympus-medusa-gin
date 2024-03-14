@@ -50,7 +50,7 @@ func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *r
 
 func (applicationModel ApplicationModel) SearchApplicationList(applicationAddRequest *request.ApplicationRequest) ([]data.TableApplication, error) {
 	var applications []data.TableApplication
-	if err := applicationModel.db.Debug().Table("tb_application").
+	if err := applicationModel.db.Table("tb_application").
 		Where(fmt.Sprintf("application_name LIKE '%%%s%%'", applicationAddRequest.ApplicationName)).
 		Find(&applications).Error; err != nil {
 		return []data.TableApplication{}, err

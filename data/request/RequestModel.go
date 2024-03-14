@@ -50,7 +50,7 @@ type GlobalDocumentRequest struct {
 	DocumentPath  string                   `json:"documentPath,omitempty"`
 	NamespaceId   int                      `json:"namespaceId,omitempty"`
 	DocumentCode  string                   `json:"documentCode,omitempty"`
-	DocumentDesc  string                   `json:"documentDesc,omitempty"`
+	DocumentValue string                   `json:"documentDesc,omitempty"`
 	PageIndex     int                      `json:"pageIndex,omitempty"`
 	PageSize      int                      `json:"pageSize,omitempty"`
 	Documents     []GlobalDocumentLanguage `json:"documents,omitempty"`
