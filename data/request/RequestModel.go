@@ -30,8 +30,8 @@ type NamespaceRequest struct {
 	PageSize               int    `json:"pageSize,omitempty"`
 }
 
-func (namespaceRequest NamespaceRequest) ConvertToTableApplicationNamespace(namespace *NamespaceRequest) *data.TableApplicationNamespace {
-	return &data.TableApplicationNamespace{
+func (namespaceRequest NamespaceRequest) ConvertToTableApplicationNamespace(namespace *NamespaceRequest) *data.ApplicationNamespace {
+	return &data.ApplicationNamespace{
 		ApplicationId:          namespace.ApplicationId,
 		NamespaceId:            namespace.NamespaceId,
 		NamespaceCode:          namespace.NamespaceCode,
@@ -44,21 +44,21 @@ func (namespaceRequest NamespaceRequest) ConvertToTableApplicationNamespace(name
 }
 
 type GlobalDocumentRequest struct {
-	Id            int                      `json:"id,omitempty"`
-	ApplicationId int                      `json:"applicationId,omitempty"`
-	DocumentId    int                      `json:"documentId,omitempty"`
-	DocumentPath  string                   `json:"documentPath,omitempty"`
-	NamespaceId   int                      `json:"namespaceId,omitempty"`
-	DocumentCode  string                   `json:"documentCode,omitempty"`
-	DocumentValue string                   `json:"documentDesc,omitempty"`
-	PageIndex     int                      `json:"pageIndex,omitempty"`
-	PageSize      int                      `json:"pageSize,omitempty"`
-	Documents     []GlobalDocumentLanguage `json:"documents,omitempty"`
-	Remarks       string                   `json:"remarks,omitempty"`
-	DocumentIds   []interface{}            `json:"documentIds,omitempty"`
+	Id            int                             `json:"id,omitempty"`
+	ApplicationId int                             `json:"applicationId,omitempty"`
+	DocumentId    int                             `json:"documentId,omitempty"`
+	DocumentPath  string                          `json:"documentPath,omitempty"`
+	NamespaceId   int                             `json:"namespaceId,omitempty"`
+	DocumentCode  string                          `json:"documentCode,omitempty"`
+	DocumentValue string                          `json:"documentDesc,omitempty"`
+	PageIndex     int                             `json:"pageIndex,omitempty"`
+	PageSize      int                             `json:"pageSize,omitempty"`
+	Documents     []GlobalDocumentLanguageRequest `json:"documents,omitempty"`
+	Remarks       string                          `json:"remarks,omitempty"`
+	DocumentIds   []interface{}                   `json:"documentIds,omitempty"`
 }
 
-type GlobalDocumentLanguage struct {
+type GlobalDocumentLanguageRequest struct {
 	DocumentId    int    `json:"documentId,omitempty"`
 	CountryIso    string `json:"countryIso,omitempty"`
 	DocumentValue string `json:"documentValue,omitempty"`

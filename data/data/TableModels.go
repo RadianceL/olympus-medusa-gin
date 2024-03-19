@@ -28,7 +28,7 @@ func (TableApplication) TableName() string {
 	return "tb_application"
 }
 
-type ApplicationGlobalizationDocumentCode struct {
+type TableGlobalizationDocumentCode struct {
 	DocumentID            int       `gorm:"column:document_id;primaryKey;autoIncrement" json:"document_id"`
 	ApplicationID         int       `gorm:"column:application_id;not null" json:"application_id"`
 	NamespaceID           int       `gorm:"column:namespace_id;not null" json:"namespace_id"`
@@ -50,16 +50,16 @@ type ApplicationGlobalizationDocumentCode struct {
 }
 
 // TableName sets the table name for the struct
-func (ApplicationGlobalizationDocumentCode) TableName() string {
+func (TableGlobalizationDocumentCode) TableName() string {
 	return "tb_application_globalization_document_code"
 }
 
-type TableGlobalDocumentValue struct {
+type TableGlobalizationDocumentValue struct {
 	Id                 int       `json:"Id,omitempty"`
-	DocumentId         int       `json:"documentId,omitempty"`
-	ApplicationId      int       `json:"applicationId,omitempty"`
-	ApplicationName    string    `json:"applicationName,omitempty"`
-	NamespaceId        int       `json:"namespaceId,omitempty"`
+	DocumentId         int       `json:"document_id,omitempty"`
+	ApplicationId      int       `json:"application_id,omitempty"`
+	ApplicationName    string    `json:"application_name,omitempty"`
+	NamespaceId        int       `json:"namespace_id,omitempty"`
 	CountryIso         string    `json:"country_iso,omitempty"`
 	DocumentCode       string    `json:"documentCode,omitempty"`
 	CountryName        string    `json:"country_name,omitempty"`
@@ -70,6 +70,21 @@ type TableGlobalDocumentValue struct {
 }
 
 // TableName sets the table name for the struct
-func (TableGlobalDocumentValue) TableName() string {
+func (TableGlobalizationDocumentValue) TableName() string {
 	return "tb_application_globalization_document_value"
+}
+
+type TableApplicationNamespace struct {
+	ApplicationId     int    `json:"application_id,omitempty"`
+	NamespaceId       int    `json:"namespace_id,omitempty"`
+	NamespaceCode     string `json:"namespace_code,omitempty"`
+	NamespaceName     string `json:"namespace_name,omitempty"`
+	NamespacePath     string `json:"namespace_path,omitempty"`
+	NamespaceParentId int    `json:"namespace_parent_id,omitempty"`
+	CreateUserId      int    `json:"create_user,omitempty"`
+}
+
+// TableName sets the table name for the struct
+func (TableApplicationNamespace) TableName() string {
+	return "tb_application_namespace"
 }

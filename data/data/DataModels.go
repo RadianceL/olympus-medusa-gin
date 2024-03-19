@@ -20,11 +20,11 @@ type Application struct {
 }
 
 type TablePage struct {
-	TotalSize            int64                       `json:"totalSize,omitempty"`
-	ApplicationNamespace []TableApplicationNamespace `json:"dataList"`
+	TotalSize            int64                  `json:"totalSize,omitempty"`
+	ApplicationNamespace []ApplicationNamespace `json:"dataList"`
 }
 
-type TableApplicationNamespace struct {
+type ApplicationNamespace struct {
 	ApplicationId          int    `json:"applicationId,omitempty"`
 	NamespaceId            int    `json:"namespaceId,omitempty"`
 	NamespaceCode          string `json:"namespaceCode,omitempty"`
@@ -35,24 +35,24 @@ type TableApplicationNamespace struct {
 	CreateUserId           int    `json:"createUserId,omitempty"`
 }
 
-type TableGlobalDocumentPage struct {
-	TotalSize      int64                 `json:"totalSize,omitempty"`
-	GlobalDocument []TableGlobalDocument `json:"dataList"`
+type GlobalDocumentPage struct {
+	TotalSize      int64            `json:"totalSize,omitempty"`
+	GlobalDocument []GlobalDocument `json:"dataList"`
 }
 
-type TableGlobalDocument struct {
-	DocumentId      int                           `json:"documentId,omitempty"`
-	ApplicationId   int                           `json:"applicationId,omitempty"`
-	ApplicationName string                        `json:"applicationName,omitempty"`
-	NamespaceId     int                           `json:"namespaceId,omitempty"`
-	NamespaceName   string                        `json:"namespaceName,omitempty"`
-	DocumentDesc    string                        `json:"documentDesc,omitempty"`
-	DocumentCode    string                        `json:"documentCode,omitempty"`
-	CreateTime      string                        `json:"createTime,omitempty"`
-	Documents       []TableGlobalDocumentLanguage `json:"documents,omitempty"`
+type GlobalDocument struct {
+	DocumentId      int                      `json:"documentId,omitempty"`
+	ApplicationId   int                      `json:"applicationId,omitempty"`
+	ApplicationName string                   `json:"applicationName,omitempty"`
+	NamespaceId     int                      `json:"namespaceId,omitempty"`
+	NamespaceName   string                   `json:"namespaceName,omitempty"`
+	DocumentDesc    string                   `json:"documentDesc,omitempty"`
+	DocumentCode    string                   `json:"documentCode,omitempty"`
+	CreateTime      string                   `json:"createTime,omitempty"`
+	Documents       []GlobalDocumentLanguage `json:"documents,omitempty"`
 }
 
-type TableGlobalDocumentLanguage struct {
+type GlobalDocumentLanguage struct {
 	Id                 int    `json:"documentId,omitempty"`
 	CountryIso         string `json:"countryIso,omitempty"`
 	DocumentCode       string `json:"documentCode,omitempty"`
@@ -62,12 +62,12 @@ type TableGlobalDocumentLanguage struct {
 }
 
 type ExportGlobalDocument struct {
-	ImportSuccessList []TableGlobalDocumentExcel `json:"importSuccessList"`
-	ImportFailureList []TableGlobalDocumentExcel `json:"importFailureList"`
-	Success           bool                       `json:"success,omitempty"`
+	ImportSuccessList []GlobalDocumentExcel `json:"importSuccessList"`
+	ImportFailureList []GlobalDocumentExcel `json:"importFailureList"`
+	Success           bool                  `json:"success,omitempty"`
 }
 
-type TableGlobalDocumentExcel struct {
+type GlobalDocumentExcel struct {
 	ApplicationId   int    `json:"applicationId,omitempty"`
 	ApplicationName string `json:"applicationName,omitempty"`
 	NamespaceId     int    `json:"namespaceId,omitempty"`

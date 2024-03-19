@@ -85,7 +85,7 @@ func (controller DocumentController) ExportGlobalizationCopyWriting(context *gin
 	f = controller.ExcelHeader(f)
 	for i, document := range searchApplicationList {
 		curIndex := i + 2
-		var documentResult data.TableGlobalDocumentExcel
+		var documentResult data.GlobalDocumentExcel
 		_ = mapstructure.Decode(document, &documentResult)
 		strIndex := strconv.Itoa(curIndex)
 		err := f.SetCellValue("Sheet1", "A"+strIndex, document.ApplicationName+"("+strconv.Itoa(document.ApplicationId)+")")

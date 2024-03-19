@@ -7,15 +7,26 @@ import (
 	"gorm.io/gorm"
 	"olympus-medusa/common"
 	"olympus-medusa/config"
-	"olympus-medusa/data/data"
-	"olympus-medusa/data/request"
+	. "olympus-medusa/data/data"
+	. "olympus-medusa/data/request"
 )
 
 type IApplicationModel interface {
-	AddApplication(applicationAddRequest *request.ApplicationRequest) (int64, error)
-	SearchApplicationList(applicationAddRequest *request.ApplicationRequest) ([]data.TableApplication, error)
-	SearchApplicationById(applicationId int) (data.TableApplication, error)
+	AddApplication(applicationAddRequest *ApplicationRequest) (int64, error)
+	SearchApplicationList(applicationAddRequest *ApplicationRequest) ([]TableApplication, error)
+	SearchApplicationById(applicationId int) (TableApplication, error)
 }
+
+const (
+	applicationModelTableName = "tb_application"
+	id                        = "id"
+	applicationName           = "application_name"
+	applicationAdministrators = "application_administrators"
+	applicationType           = "application_type"
+	applicationPath           = "application_path"
+	mustContainLanguage       = "must_contain_language"
+	applicationEnvironment    = "application_environment"
+)
 
 // ApplicationModel is application model structure.
 type ApplicationModel struct {
@@ -28,7 +39,7 @@ func NewApplicationModel() IApplicationModel {
 }
 
 // AddApplication add a role to the menu.
-func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *request.ApplicationRequest) (int64, error) {
+func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *ApplicationRequest) (int64, error) {
 	containLanguageList, err := json.Marshal(applicationAddRequest.ApplicationLanguage)
 	if err != nil {
 		applicationModel.logger.Panic(err)
@@ -36,7 +47,7 @@ func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *r
 	if applicationAddRequest.ApplicationPath == "" {
 		applicationAddRequest.ApplicationPath = "/" + applicationAddRequest.ApplicationName
 	}
-	application := data.TableApplication{
+	application := TableApplication{
 		ApplicationName:           applicationAddRequest.ApplicationName,
 		ApplicationAdministrators: applicationAddRequest.ApplicationAdministrators,
 		ApplicationType:           applicationAddRequest.ApplicationType,
@@ -48,25 +59,25 @@ func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *r
 	return tx.RowsAffected, tx.Error
 }
 
-func (applicationModel ApplicationModel) SearchApplicationList(applicationAddRequest *request.ApplicationRequest) ([]data.TableApplication, error) {
-	var applications []data.TableApplication
+func (applicationModel ApplicationModel) SearchApplicationList(applicationAddRequest *ApplicationRequest) ([]TableApplication, error) {
+	var applications []TableApplication
 	if err := applicationModel.db.Table("tb_application").
 		Where(fmt.Sprintf("application_name LIKE '%%%s%%'", applicationAddRequest.ApplicationName)).
 		Find(&applications).Error; err != nil {
-		return []data.TableApplication{}, err
+		return []TableApplication{}, err
 	}
 	if applications == nil {
-		return []data.TableApplication{}, nil
+		return []TableApplication{}, nil
 	}
 	return applications, nil
 }
 
-func (applicationModel ApplicationModel) SearchApplicationById(applicationId int) (data.TableApplication, error) {
-	var application data.Application
+func (applicationModel ApplicationModel) SearchApplicationById(applicationId int) (TableApplication, error) {
+	var application Application
 	if err := applicationModel.db.Where("id = ?", applicationId).Find(&application).Error; err != nil {
-		return data.TableApplication{}, err
+		return TableApplication{}, err
 	}
-	var tableApplication = &data.TableApplication{}
+	var tableApplication = &TableApplication{}
 	tableApplication.Id = application.ID
 	tableApplication.ApplicationAdministrators = application.ApplicationAdministrators
 	tableApplication.ApplicationEnvironment = application.ApplicationEnvironment
