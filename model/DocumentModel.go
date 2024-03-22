@@ -3,7 +3,6 @@ package model
 import (
 	"container/list"
 	"errors"
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"olympus-medusa/common"
@@ -528,14 +527,20 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 			}
 			if len(arrays) != 0 {
 				queryDocumentValueEnStatement.Where(documentTableName+"."+documentCodeField+" IN", arrays)
-				queryDocumentValueEnStatementResult := queryDocumentValueEnStatement.Find()
+				queryDocumentValueEnStatementResult := queryDocumentValueEnStatement.Find(&documentValueResultEnList)
 				if queryDocumentValueEnStatementResult.Error != nil {
 					return resultMap, queryDocumentValueEnStatementResult.Error
 				}
 				var result []GlobalDocumentLanguage
 				for _, documentValueResultData := range documentValueResultEnList {
-					var tableGlobalDocumentLanguageOutputResult GlobalDocumentLanguage
-					_ = mapstructure.Decode(documentValueResultData, &tableGlobalDocumentLanguageOutputResult)
+					var tableGlobalDocumentLanguageOutputResult = GlobalDocumentLanguage{
+						CountryIso:         documentValueResultData.CountryIso,
+						DocumentValue:      documentValueResultData.DocumentValue,
+						CreateTime:         convert.ToString(documentValueResultData.CreateTime),
+						LastUpdateDocument: documentValueResultData.LastUpdateDocument,
+						Id:                 documentValueResultData.Id,
+						DocumentCode:       documentValueResultData.DocumentCode,
+					}
 					result = append(result, tableGlobalDocumentLanguageOutputResult)
 				}
 				documentResult.Documents = result
@@ -550,9 +555,15 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 			}
 		}
 		var result []GlobalDocumentLanguage
-		for _, documentValueResultData := range documentValueResultDataMaps {
-			var tableGlobalDocumentLanguageOutputResult GlobalDocumentLanguage
-			_ = mapstructure.Decode(documentValueResultData, &tableGlobalDocumentLanguageOutputResult)
+		for _, documentValueResultData := range documentValues {
+			var tableGlobalDocumentLanguageOutputResult = GlobalDocumentLanguage{
+				Id:                 documentValueResultData.DocumentId,
+				CountryIso:         documentValueResultData.CountryIso,
+				DocumentCode:       documentValueResultData.DocumentCode,
+				DocumentValue:      documentValueResultData.DocumentValue,
+				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
+				CreateTime:         convert.ToString(documentValueResultData.CreateTime),
+			}
 			result = append(result, tableGlobalDocumentLanguageOutputResult)
 		}
 		documentResult.Documents = result
@@ -595,18 +606,27 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 	for _, namespaceDataMap := range namespaceResultMap {
 		var resultList []GlobalDocument
 		var documentResult GlobalDocument
+		var documentValueResultDataLists []TableGlobalizationDocumentValue
 		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName).Select("*")
-		queryDocumentValueStatement.LeftJoin(documentTableName, documentValueTableName+"."+documentIdField, "=", documentTableName+"."+documentIdField)
-		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField, "=", namespaceDataMap.NamespaceId)
-		documentValueResultDataMaps, documentValueErr := queryDocumentValueStatement.All()
-		if documentValueErr != nil {
-			return resultMap, documentValueErr
+		queryDocumentValueStatement.Joins("LEFT JOIN " +
+			documentTableName + "ON " +
+			documentValueTableName + "." + documentIdField + " = " + documentTableName + "." + documentIdField)
+		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField+"=", namespaceDataMap.NamespaceId)
+		documentValueResultDataResult := queryDocumentValueStatement.Find(&documentValueResultDataLists)
+		if documentValueResultDataResult.Error != nil {
+			return resultMap, documentValueResultDataResult.Error
 		}
 		var result []GlobalDocumentLanguage
-		for _, documentValueResultData := range documentValueResultDataMaps {
-			var tableGlobalDocumentLanguageOutputResult GlobalDocumentLanguage
-			_ = mapstructure.Decode(documentValueResultData, &tableGlobalDocumentLanguageOutputResult)
-			result = append(result, tableGlobalDocumentLanguageOutputResult)
+		for _, documentValueResultData := range documentValueResultDataLists {
+			var tableGlobalDocumentLanguageResult = GlobalDocumentLanguage{
+				Id:                 documentValueResultData.DocumentId,
+				CountryIso:         documentValueResultData.CountryIso,
+				DocumentCode:       documentValueResultData.DocumentCode,
+				DocumentValue:      documentValueResultData.DocumentValue,
+				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
+				CreateTime:         convert.ToString(documentValueResultData.CreateTime),
+			}
+			result = append(result, tableGlobalDocumentLanguageResult)
 		}
 		documentResult.Documents = result
 		resultList = append(resultList, documentResult)
