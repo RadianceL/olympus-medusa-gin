@@ -113,8 +113,9 @@ func (documentModel DocumentModel) CreateDocument(globalDocumentRequest *GlobalD
 		return nil
 	}); err != nil {
 		return 0, err
+	} else {
+		return 1, nil
 	}
-	return 1, nil
 }
 
 func (documentModel DocumentModel) SearchDocumentValue(globalDocumentRequest *GlobalDocumentRequest) (arr []interface{}) {
@@ -402,10 +403,10 @@ func (documentModel DocumentModel) SearchDocumentById(globalDocumentRequest *Glo
 	var globalDocument TableGlobalizationDocumentCode
 	statement := documentModel.db.Table(documentTableName)
 	if globalDocumentRequest.Id != 0 {
-		statement.Where(documentIdField+"=", globalDocumentRequest.Id)
+		statement.Where(documentIdField, globalDocumentRequest.Id)
 	} else if globalDocumentRequest.DocumentCode != "" {
-		statement.Where(namespaceIdField+"=", globalDocumentRequest.NamespaceId)
-		statement.Where(documentCodeField+"=", globalDocumentRequest.DocumentCode)
+		statement.Where(namespaceIdField, globalDocumentRequest.NamespaceId)
+		statement.Where(documentCodeField, globalDocumentRequest.DocumentCode)
 	} else {
 		return GlobalDocument{}, errors.New("文案ID或文案编码与命名空间ID必传其中一个")
 	}
@@ -416,7 +417,7 @@ func (documentModel DocumentModel) SearchDocumentById(globalDocumentRequest *Glo
 
 	var globalDocumentValue []TableGlobalizationDocumentValue
 	queryDocumentValueStatement := documentModel.db.Table(documentValueTableName)
-	queryDocumentValueStatement.Where(documentIdField+"=", globalDocument.DocumentID)
+	queryDocumentValueStatement.Where(documentIdField, globalDocument.DocumentID)
 
 	documentValueErr := queryDocumentValueStatement.Find(&globalDocumentValue)
 	if documentValueErr.Error != nil {
@@ -455,7 +456,7 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 		return resultMap, errors.New("单次查询不能超过4个命名空间")
 	}
 	namespaceStatement := documentModel.db.Table(namespaceModelTableName)
-	namespaceStatement.Where(namespacePath+"=", globalDocumentIsoQueryRequest.NamespacePath)
+	namespaceStatement.Where(namespacePath, globalDocumentIsoQueryRequest.NamespacePath)
 	namespaceResultStatement := namespaceStatement.Find(&namespaceResultMap)
 	if namespaceResultStatement.Error != nil {
 		return resultMap, namespaceResultStatement.Error
@@ -477,8 +478,8 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 
 		var documentValues []TableGlobalizationDocumentValue
 		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName).Select("*")
-		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField+"=", namespaceResult.NamespaceId)
-		queryDocumentValueStatement.Where(countryIsoField, "=", globalDocumentIsoQueryRequest.CountryIso)
+		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField, namespaceResult.NamespaceId)
+		queryDocumentValueStatement.Where(documentValueTableName+"."+countryIsoField, globalDocumentIsoQueryRequest.CountryIso)
 		queryDocumentValueStatement.Joins("LEFT JOIN " +
 			documentTableName + "ON " +
 			documentValueTableName + "." + documentIdField + " = " + documentTableName + "." + documentIdField)
