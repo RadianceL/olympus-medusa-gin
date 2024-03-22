@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"olympus-medusa/common"
@@ -62,8 +61,7 @@ func (applicationModel ApplicationModel) AddApplication(applicationAddRequest *A
 func (applicationModel ApplicationModel) SearchApplicationList(applicationAddRequest *ApplicationRequest) ([]TableApplication, error) {
 	var applications []TableApplication
 	if err := applicationModel.db.Table("tb_application").
-		Where(fmt.Sprintf("application_name LIKE '%%%s%%'", applicationAddRequest.ApplicationName)).
-		Find(&applications).Error; err != nil {
+		Where("application_name LIKE ?", "%"+applicationAddRequest.ApplicationName+"%").Find(&applications).Error; err != nil {
 		return []TableApplication{}, err
 	}
 	if applications == nil {

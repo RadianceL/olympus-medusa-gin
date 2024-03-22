@@ -2,6 +2,7 @@ package model
 
 import (
 	"container/list"
+	"database/sql"
 	"errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -70,60 +71,50 @@ func NewDocumentModel() IDocumentModel {
 }
 
 func (documentModel DocumentModel) CreateDocument(globalDocumentRequest *GlobalDocumentRequest) (int64, error) {
-	tx := documentModel.db.Begin()
-	documentCode := TableGlobalizationDocumentCode{
-		ApplicationID:        globalDocumentRequest.ApplicationId,
-		NamespaceID:          globalDocumentRequest.NamespaceId,
-		DocumentCode:         globalDocumentRequest.DocumentCode,
-		DocumentDesc:         globalDocumentRequest.DocumentValue,
-		OnlineTime:           time.Now(),
-		OnlineOperatorUserID: 0,
-		DeleteFlag:           0,
-		IsEnable:             1,
-		CreateUserID:         0,
-		CreateTime:           time.Now(),
-		DeleteUserID:         0,
-	}
-	insertDocumentCodeTx := documentModel.db.
-		Table("tb_application_globalization_document_code").
-		Create(&documentCode)
-
-	if insertDocumentCodeTx.Error != nil {
-		_ = tx.Rollback()
-		return 0, insertDocumentCodeTx.Error
-	}
-
-	documents := globalDocumentRequest.Documents
-	for _, document := range documents {
-		languageCountry := language.FindLanguage(document.CountryIso)
-		if languageCountry == nil {
-			_ = tx.Rollback()
-			return 0, errors.New("未识别的国家编码，请检查后重试")
+	if err := documentModel.db.Transaction(func(tx *gorm.DB) error {
+		documentCode := TableGlobalizationDocumentCode{
+			ApplicationID:        globalDocumentRequest.ApplicationId,
+			NamespaceID:          globalDocumentRequest.NamespaceId,
+			DocumentCode:         globalDocumentRequest.DocumentCode,
+			DocumentDesc:         globalDocumentRequest.DocumentValue,
+			OnlineTime:           sql.NullTime{Time: time.Now(), Valid: true},
+			OnlineOperatorUserID: 0,
+			DeleteFlag:           0,
+			IsEnable:             1,
+			CreateUserID:         0,
+			CreateTime:           sql.NullTime{Time: time.Now(), Valid: true},
+			UpdateTime:           sql.NullTime{Time: time.Now(), Valid: true},
+			DeleteTime:           sql.NullTime{},
+			OfflineTime:          sql.NullTime{},
+			DeleteUserID:         0,
 		}
-		documentValue := TableGlobalizationDocumentValue{
-			DocumentId:       documentCode.DocumentID,
-			ApplicationId:    documentCode.ApplicationID,
-			NamespaceId:      documentCode.NamespaceID,
-			CountryIso:       document.CountryIso,
-			CountryName:      languageCountry.CountryName,
-			DocumentCode:     documentCode.DocumentCode,
-			DocumentValue:    document.DocumentValue,
-			DocumentIsOnline: 1,
-			CreateTime:       time.Now(),
+		if err := documentModel.db.Create(&documentCode).Error; err != nil {
+			return err
 		}
-		documentValueTx := documentModel.db.
-			Create(&documentValue)
-		if documentValueTx.Error != nil {
-			_ = tx.Rollback()
-			return 0, documentValueTx.Error
+		for _, document := range globalDocumentRequest.Documents {
+			languageCountry := language.FindLanguage(document.CountryIso)
+			if languageCountry == nil {
+				return errors.New("未识别的国家编码，请检查后重试")
+			}
+			documentValue := TableGlobalizationDocumentValue{
+				DocumentId:       documentCode.DocumentID,
+				NamespaceId:      documentCode.NamespaceID,
+				CountryIso:       document.CountryIso,
+				CountryName:      languageCountry.CountryName,
+				DocumentValue:    document.DocumentValue,
+				DocumentIsOnline: 1,
+				CreateTime:       sql.NullTime{Time: time.Now(), Valid: true},
+			}
+			if err := documentModel.db.Omit("document_code").
+				Create(&documentValue).Error; err != nil {
+				return err
+			}
 		}
+		return nil
+	}); err != nil {
+		return 0, err
 	}
-	commitError := tx.Commit()
-	if commitError != nil {
-		_ = tx.Rollback()
-		return 0, tx.Error
-	}
-	return tx.RowsAffected, nil
+	return 1, nil
 }
 
 func (documentModel DocumentModel) SearchDocumentValue(globalDocumentRequest *GlobalDocumentRequest) (arr []interface{}) {
@@ -372,7 +363,7 @@ func (documentModel DocumentModel) DeleteDocumentByDocumentId(namespaceRequest *
 			DeleteFlag:   1,
 			Remarks:      namespaceRequest.Remarks,
 			DocumentCode: namespaceRequest.DocumentCode + "_@delete_" + strconv.FormatInt(nano, 10),
-			DeleteTime:   time.Now(),
+			DeleteTime:   sql.NullTime{Time: time.Now(), Valid: true},
 		})
 	if documentTableNameStatement.Error != nil {
 		if documentTableNameStatement.Error.Error() != "no affect row" {
@@ -539,7 +530,6 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 						CreateTime:         convert.ToString(documentValueResultData.CreateTime),
 						LastUpdateDocument: documentValueResultData.LastUpdateDocument,
 						Id:                 documentValueResultData.Id,
-						DocumentCode:       documentValueResultData.DocumentCode,
 					}
 					result = append(result, tableGlobalDocumentLanguageOutputResult)
 				}
@@ -559,7 +549,6 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 			var tableGlobalDocumentLanguageOutputResult = GlobalDocumentLanguage{
 				Id:                 documentValueResultData.DocumentId,
 				CountryIso:         documentValueResultData.CountryIso,
-				DocumentCode:       documentValueResultData.DocumentCode,
 				DocumentValue:      documentValueResultData.DocumentValue,
 				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
 				CreateTime:         convert.ToString(documentValueResultData.CreateTime),
@@ -621,7 +610,6 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 			var tableGlobalDocumentLanguageResult = GlobalDocumentLanguage{
 				Id:                 documentValueResultData.DocumentId,
 				CountryIso:         documentValueResultData.CountryIso,
-				DocumentCode:       documentValueResultData.DocumentCode,
 				DocumentValue:      documentValueResultData.DocumentValue,
 				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
 				CreateTime:         convert.ToString(documentValueResultData.CreateTime),

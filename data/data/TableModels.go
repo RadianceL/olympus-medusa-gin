@@ -1,7 +1,7 @@
 package data
 
 import (
-	"time"
+	"database/sql"
 )
 
 type Tabler interface {
@@ -29,24 +29,24 @@ func (TableApplication) TableName() string {
 }
 
 type TableGlobalizationDocumentCode struct {
-	DocumentID            int       `gorm:"column:document_id;primaryKey;autoIncrement" json:"document_id"`
-	ApplicationID         int       `gorm:"column:application_id;not null" json:"application_id"`
-	NamespaceID           int       `gorm:"column:namespace_id;not null" json:"namespace_id"`
-	DocumentCode          string    `gorm:"column:document_code;not null" json:"document_code"`
-	DocumentDesc          string    `gorm:"column:document_desc" json:"document_desc"`
-	IsEnable              int       `gorm:"column:is_enable;default:1;not null" json:"is_enable"`
-	OnlineTime            time.Time `gorm:"column:online_time" json:"online_time"`
-	OnlineOperatorUserID  int       `gorm:"column:online_operator_user_id" json:"online_operator_user_id"`
-	OfflineTime           time.Time `gorm:"column:offline_time" json:"offline_time"`
-	OfflineOperatorUserID int       `gorm:"column:offline_operator_user_id" json:"offline_operator_user_id"`
-	OfflineAccessUserID   int       `gorm:"column:offline_access_user_id" json:"offline_access_user_id"`
-	CreateTime            time.Time `gorm:"column:create_time;default:CURRENT_TIMESTAMP;not null" json:"create_time"`
-	UpdateTime            time.Time `gorm:"column:update_time" json:"update_time"`
-	CreateUserID          int       `gorm:"column:create_user_id" json:"create_user_id"`
-	DeleteFlag            int       `gorm:"column:delete_flag;default:0" json:"delete_flag"`
-	DeleteTime            time.Time `gorm:"column:delete_time" json:"delete_time"`
-	DeleteUserID          int       `gorm:"column:delete_user_id" json:"delete_user_id"`
-	Remarks               string    `gorm:"column:remarks" json:"remarks"`
+	DocumentID            int          `gorm:"column:document_id;primaryKey;autoIncrement" json:"document_id"`
+	ApplicationID         int          `gorm:"column:application_id;not null" json:"application_id"`
+	NamespaceID           int          `gorm:"column:namespace_id;not null" json:"namespace_id"`
+	DocumentCode          string       `gorm:"column:document_code;not null" json:"document_code"`
+	DocumentDesc          string       `gorm:"column:document_desc" json:"document_desc"`
+	IsEnable              int          `gorm:"column:is_enable;default:1;not null" json:"is_enable"`
+	OnlineTime            sql.NullTime `gorm:"column:online_time" json:"online_time"`
+	OnlineOperatorUserID  int          `gorm:"column:online_operator_user_id" json:"online_operator_user_id"`
+	OfflineTime           sql.NullTime `gorm:"column:offline_time" json:"offline_time"`
+	OfflineOperatorUserID int          `gorm:"column:offline_operator_user_id" json:"offline_operator_user_id"`
+	OfflineAccessUserID   int          `gorm:"column:offline_access_user_id" json:"offline_access_user_id"`
+	CreateTime            sql.NullTime `gorm:"column:create_time;default:CURRENT_TIMESTAMP;not null" json:"create_time"`
+	UpdateTime            sql.NullTime `gorm:"column:update_time" json:"update_time"`
+	CreateUserID          int          `gorm:"column:create_user_id" json:"create_user_id"`
+	DeleteFlag            int          `gorm:"column:delete_flag;default:0" json:"delete_flag"`
+	DeleteTime            sql.NullTime `gorm:"column:delete_time" json:"delete_time"`
+	DeleteUserID          int          `gorm:"column:delete_user_id" json:"delete_user_id"`
+	Remarks               string       `gorm:"column:remarks" json:"remarks"`
 }
 
 // TableName sets the table name for the struct
@@ -55,18 +55,16 @@ func (TableGlobalizationDocumentCode) TableName() string {
 }
 
 type TableGlobalizationDocumentValue struct {
-	Id                 int       `json:"Id,omitempty"`
-	DocumentId         int       `json:"document_id,omitempty"`
-	ApplicationId      int       `json:"application_id,omitempty"`
-	ApplicationName    string    `json:"application_name,omitempty"`
-	NamespaceId        int       `json:"namespace_id,omitempty"`
-	CountryIso         string    `json:"country_iso,omitempty"`
-	DocumentCode       string    `json:"documentCode,omitempty"`
-	CountryName        string    `json:"country_name,omitempty"`
-	DocumentValue      string    `json:"document_value,omitempty"`
-	LastUpdateDocument string    `json:"lastUpdateDocument,omitempty"`
-	DocumentIsOnline   int       `json:"document_is_online,omitempty"`
-	CreateTime         time.Time `json:"createTime,omitempty"`
+	Id                 int          `json:"Id,omitempty"`
+	DocumentId         int          `json:"document_id,omitempty"`
+	NamespaceId        int          `json:"namespace_id,omitempty"`
+	CountryIso         string       `json:"country_iso,omitempty"`
+	CountryName        string       `json:"country_name,omitempty"`
+	DocumentCode       string       `json:"document_code,omitempty"`
+	DocumentValue      string       `json:"document_value,omitempty"`
+	DocumentIsOnline   int          `json:"document_is_online,omitempty"`
+	LastUpdateDocument string       `json:"lastUpdateDocument,omitempty"`
+	CreateTime         sql.NullTime `json:"createTime,omitempty"`
 }
 
 // TableName sets the table name for the struct
