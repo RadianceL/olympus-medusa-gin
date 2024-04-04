@@ -41,4 +41,10 @@ func RegisterRouterSys(app *gin.RouterGroup) {
 	app.POST("/application/document/commit", documentController.CommitGlobalizationCopyWriting)
 	// 查询应用文案历史记录
 	app.POST("/application/document/query/history", documentController.ListGlobalizationCopyWritingHistory)
+
+	app.POST("/application/namespace/document/iso/list", documentController.ListNamespaceDocumentByISO)
+
+	app.POST("/application/document/iso/list", documentController.ListApplicationDocumentByISO)
+
+	app.POST("/application/document/option", documentController.ListApplicationDocumentOption)
 }

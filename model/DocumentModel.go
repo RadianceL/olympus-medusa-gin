@@ -292,12 +292,12 @@ func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *
 
 			var tableGlobalDocumentLanguageList []GlobalDocumentLanguage
 			queryDocumentValueStatement := tx.Table(documentValueTableName).Select("*")
-			queryDocumentValueStatement.Where(documentIdField+"=", namespaceRequest.DocumentId)
-			queryDocumentValueStatement.Where(countryIsoField+"=", document.CountryIso)
+			queryDocumentValueStatement.Where(documentIdField+"= ?", namespaceRequest.DocumentId)
+			queryDocumentValueStatement.Where(countryIsoField+"= ?", document.CountryIso)
 			queryDocumentValueStatement.Find(&tableGlobalDocumentLanguageList)
 
 			if queryDocumentValueStatement.Error != nil {
-				return errors.New("更新多语言文案语言编码查重异常，请稍后重试")
+				return queryDocumentValueStatement.Error
 			}
 			if len(tableGlobalDocumentLanguageList) <= 0 {
 				languageCountry := language.FindLanguage(document.CountryIso)
@@ -312,7 +312,7 @@ func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *
 					CountryName:   languageCountry.CountryName,
 					DocumentValue: document.DocumentValue,
 				}
-				createDocumentValueStatement := tx.Create(&documentValue)
+				createDocumentValueStatement := tx.Omit("document_code").Create(&documentValue)
 				if createDocumentValueStatement.Error != nil {
 					return createDocumentValueStatement.Error
 				}
@@ -320,23 +320,23 @@ func (documentModel DocumentModel) UpdateDocumentByDocumentId(namespaceRequest *
 				var tableGlobalDocumentValueResult TableGlobalizationDocumentValue
 				if document.DocumentId == 0 {
 					queryDocumentValueItemStatement := tx.Table(documentValueTableName)
-					queryDocumentValueItemStatement.Where(documentIdField+"=", namespaceRequest.DocumentId)
-					queryDocumentValueItemStatement.Where(namespaceIdField+"=", namespaceRequest.NamespaceId)
-					queryDocumentValueItemStatement.Where(countryIsoField+"=", document.CountryIso)
+					queryDocumentValueItemStatement.Where(documentIdField+"= ?", namespaceRequest.DocumentId)
+					queryDocumentValueItemStatement.Where(namespaceIdField+"= ?", namespaceRequest.NamespaceId)
+					queryDocumentValueItemStatement.Where(countryIsoField+"= ?", document.CountryIso)
 					queryDocumentValueItemStatement = queryDocumentValueStatement.First(&applicationGlobalizationDocumentCode)
 
 					if queryDocumentValueItemStatement.Error != nil {
 						return queryDocumentValueItemStatement.Error
 					}
 				} else {
-					documentResultDataResult := tx.Find(&applicationGlobalizationDocumentCode, "id=?", document.DocumentId)
+					documentResultDataResult := tx.Find(&applicationGlobalizationDocumentCode, "document_id=?", document.DocumentId)
 					if documentResultDataResult.Error != nil {
 						return documentResultDataResult.Error
 					}
 				}
 				updateDocumentValueStatement := tx.Model(TableGlobalizationDocumentValue{}).
-					Where("id =", tableGlobalDocumentValueResult.Id).
-					Updates(TableGlobalizationDocumentValue{
+					Where("id = ?", tableGlobalDocumentValueResult.Id).
+					Updates(&TableGlobalizationDocumentValue{
 						DocumentValue:      document.DocumentValue,
 						LastUpdateDocument: tableGlobalDocumentValueResult.DocumentValue,
 					})
@@ -470,19 +470,19 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 
 		var documentCodes []TableGlobalizationDocumentCode
 		queryDocumentCodeStatement := documentModel.db.Table(documentTableName).Select("*")
-		queryDocumentCodeStatement.Where(documentTableName+"."+namespaceIdField+"=", namespaceResult.NamespaceId)
+		queryDocumentCodeStatement.Where(documentTableName+"."+namespaceIdField+"=?", namespaceResult.NamespaceId)
 		queryDocumentCodeStatementResult := queryDocumentCodeStatement.Find(&documentCodes)
 		if queryDocumentCodeStatementResult.Error != nil {
 			return resultMap, queryDocumentCodeStatementResult.Error
 		}
 
 		var documentValues []TableGlobalizationDocumentValue
-		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName).Select("*")
-		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField, namespaceResult.NamespaceId)
-		queryDocumentValueStatement.Where(documentValueTableName+"."+countryIsoField, globalDocumentIsoQueryRequest.CountryIso)
-		queryDocumentValueStatement.Joins("LEFT JOIN " +
-			documentTableName + "ON " +
-			documentValueTableName + "." + documentIdField + " = " + documentTableName + "." + documentIdField)
+		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName).Select("*").
+			Joins("LEFT JOIN "+
+				documentTableName+" ON "+
+				documentValueTableName+"."+documentIdField+" = "+documentTableName+"."+documentIdField).
+			Where(documentValueTableName+"."+namespaceIdField+" =?", namespaceResult.NamespaceId).
+			Where(documentValueTableName+"."+countryIsoField+" =?", globalDocumentIsoQueryRequest.CountryIso)
 
 		queryDocumentValueStatementResult := queryDocumentValueStatement.Find(&documentValues)
 		if queryDocumentValueStatementResult.Error != nil {
@@ -509,7 +509,7 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 			var documentValueResultEnList []TableGlobalizationDocumentValue
 			queryDocumentValueEnStatement := documentModel.db.Table(documentValueTableName).Select("*")
 			queryDocumentValueEnStatement.Where(documentValueTableName+"."+namespaceIdField+"=", namespaceResult.NamespaceId)
-			queryDocumentValueEnStatement.Where(countryIsoField+"=", "EN")
+			queryDocumentValueEnStatement.Where(countryIsoField+"=?", "EN")
 			queryDocumentValueEnStatement.Joins("LEFT JOIN " +
 				documentTableName + "ON " +
 				documentValueTableName + "." + documentIdField + " = " + documentTableName + "." + documentIdField)
@@ -550,6 +550,7 @@ func (documentModel DocumentModel) SearchDocumentByCountryIso(globalDocumentIsoQ
 			var tableGlobalDocumentLanguageOutputResult = GlobalDocumentLanguage{
 				Id:                 documentValueResultData.DocumentId,
 				CountryIso:         documentValueResultData.CountryIso,
+				DocumentCode:       documentValueResultData.DocumentCode,
 				DocumentValue:      documentValueResultData.DocumentValue,
 				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
 				CreateTime:         convert.ToString(documentValueResultData.CreateTime),
@@ -573,7 +574,7 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 	resultMap := make(map[string]map[string]string)
 	var application []TableApplication
 	applicationStatement := documentModel.db.Table(applicationModelTableName)
-	applicationStatement.Where(applicationPath, "=", globalDocumentIsoQueryRequest.ApplicationPath)
+	applicationStatement.Where(applicationPath+"= ?", globalDocumentIsoQueryRequest.ApplicationPath)
 	applicationStatementResult := applicationStatement.Find(&application)
 	if applicationStatementResult.Error != nil {
 		return resultMap, applicationStatementResult.Error
@@ -584,7 +585,7 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 
 	var namespaceResultMap []TableApplicationNamespace
 	namespaceStatement := documentModel.db.Table(namespaceModelTableName)
-	namespaceStatement.Where(applicationIdField+"=", application[0].Id)
+	namespaceStatement.Where(applicationIdField+"= ?", application[0].Id)
 	namespaceStatementResult := namespaceStatement.Find(&namespaceResultMap)
 	if namespaceStatementResult.Error != nil {
 		return resultMap, namespaceStatementResult.Error
@@ -599,9 +600,8 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 		var documentValueResultDataLists []TableGlobalizationDocumentValue
 		queryDocumentValueStatement := documentModel.db.Table(documentValueTableName).Select("*")
 		queryDocumentValueStatement.Joins("LEFT JOIN " +
-			documentTableName + "ON " +
-			documentValueTableName + "." + documentIdField + " = " + documentTableName + "." + documentIdField)
-		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField+"=", namespaceDataMap.NamespaceId)
+			documentTableName + " ON " + documentValueTableName + "." + "id" + " = " + documentTableName + "." + documentIdField)
+		queryDocumentValueStatement.Where(documentValueTableName+"."+namespaceIdField+"= ?", namespaceDataMap.NamespaceId)
 		documentValueResultDataResult := queryDocumentValueStatement.Find(&documentValueResultDataLists)
 		if documentValueResultDataResult.Error != nil {
 			return resultMap, documentValueResultDataResult.Error
@@ -611,6 +611,7 @@ func (documentModel DocumentModel) SearchApplicationByCountryIso(globalDocumentI
 			var tableGlobalDocumentLanguageResult = GlobalDocumentLanguage{
 				Id:                 documentValueResultData.DocumentId,
 				CountryIso:         documentValueResultData.CountryIso,
+				DocumentCode:       documentValueResultData.DocumentCode,
 				DocumentValue:      documentValueResultData.DocumentValue,
 				LastUpdateDocument: documentValueResultData.LastUpdateDocument,
 				CreateTime:         convert.ToString(documentValueResultData.CreateTime),

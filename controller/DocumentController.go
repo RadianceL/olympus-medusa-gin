@@ -34,6 +34,12 @@ type IDocumentController interface {
 	ListGlobalizationCopyWritingHistory(context *gin.Context)
 
 	CommitGlobalizationCopyWriting(context *gin.Context)
+
+	ListNamespaceDocumentByISO(context *gin.Context)
+
+	ListApplicationDocumentOption(context *gin.Context)
+
+	ListApplicationDocumentByISO(context *gin.Context)
 }
 
 type DocumentController struct {
@@ -214,6 +220,51 @@ func (controller DocumentController) CommitGlobalizationCopyWriting(context *gin
 		return
 	}
 	response.ResSuccessMsg(context)
+}
+
+func (controller DocumentController) ListNamespaceDocumentByISO(context *gin.Context) {
+	applicationAddRequest := &Request.GlobalDocumentIsoQueryRequest{}
+	err := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
+	if err != nil {
+		response.ResErrCli(context, err)
+		return
+	}
+	documentByCountryIsoList, searchDocumentByCountryIsoError := controller.documentModel.SearchDocumentByCountryIso(applicationAddRequest)
+	if searchDocumentByCountryIsoError != nil {
+		response.ResErrCli(context, searchDocumentByCountryIsoError)
+		return
+	}
+	response.ResSuccess(context, documentByCountryIsoList)
+}
+
+func (controller DocumentController) ListApplicationDocumentByISO(context *gin.Context) {
+	applicationAddRequest := &Request.GlobalDocumentIsoQueryRequest{}
+	err := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
+	if err != nil {
+		response.ResErrCli(context, err)
+		return
+	}
+	documentByCountryIsoList, searchDocumentByCountryIsoError := controller.documentModel.SearchApplicationByCountryIso(applicationAddRequest)
+	if searchDocumentByCountryIsoError != nil {
+		response.ResErrCli(context, searchDocumentByCountryIsoError)
+		return
+	}
+	response.ResSuccess(context, documentByCountryIsoList)
+}
+
+func (controller DocumentController) ListApplicationDocumentOption(context *gin.Context) {
+	applicationAddRequest := &Request.GlobalDocumentRequest{}
+	err := context.ShouldBindBodyWith(&applicationAddRequest, binding.JSON)
+	if err != nil {
+		response.ResErrCli(context, err)
+		return
+	}
+	documentByCountryIsoList, searchDocumentByCountryIsoError := controller.documentModel.SearchOptionByNamespace(applicationAddRequest)
+	if searchDocumentByCountryIsoError != nil {
+		response.ResErrCli(context, searchDocumentByCountryIsoError)
+		return
+	}
+	response.ResSuccess(context, documentByCountryIsoList)
 }
 
 func (controller DocumentController) ExcelHeader(f *excelize.File) *excelize.File {
